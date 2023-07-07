@@ -4,6 +4,8 @@ import sys
 import os
 import json
 
+from geometry import line_circle_intersect
+
 # max. window size in inches?
 win_size = 10
 
@@ -22,8 +24,14 @@ if len(sys.argv) < 2:
 load_problem(sys.argv[1])
 
 def is_blocked(placements, musician_index, attendee):
-    # TODO
+    attendee_pos = [attendee['x'], attendee['y']]
+    musician_pos = [placements[musician_index]['x'], placements[musician_index]['y']]
+    for i in range(len(placements)):
+        p = placements[i]
+        if i != musician_index and line_circle_intersect(attendee_pos, musician_pos, [p['x'], p['y']], 5):
+            return True
     return False
+            
 
 def happiness1(a,m,instrument):
     # d = math.dist([a['x'],a['y']], [m['x'],m['y']])
@@ -82,20 +90,28 @@ def plot_problem(problem):
 plot_problem(problem)
 
 
-num_musicians = len(problem['musicians'])
+# copied from simple solver
 placements = []
-pos = {'x': problem['stage_bottom_left'][0] + 20, 'y': problem['stage_bottom_left'][1] + 12}
-print(f'Placing all musicians at {pos} (illegal, I know)')
-for i in range(num_musicians):
-    placements.append(pos)
+x = problem['stage_bottom_left'][0] + 10
+y = problem['stage_bottom_left'][1] + 10
+for i in range(len(problem['musicians'])):
+    if y > problem['stage_height'] + problem['stage_bottom_left'][1] - 10:
+        print("not enough space")
+        sys.exit(1)
+    placements.append({"x": x, "y": y})
+    x = x + 10
+    if x > problem['stage_width'] + problem['stage_bottom_left'][0] - 10:
+        x = problem['stage_bottom_left'][0] + 10
+        y = y + 10
     
 # musicians
 for p in placements:
     plt.plot([p['x']], [p['y']], "go")
 
 plt.show()
-    
-print(f'Score (blocking not implemented): {score(problem, placements)}')
+
+print(f'{len(placements)} musicians placed')
+print(f'Score: {score(problem, placements)}')
 
 solution = {'placements' : placements}
 with open('placements.json', 'w') as fp:
