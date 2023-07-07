@@ -1,0 +1,18 @@
+[package]
+name = "icfpc2023"
+version = "0.1.0"
+authors = ["Christoph Breitkopf <chbreitkopf@gmail.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.8.4"
+regex = "1.9.0"
+serde = { version = "1.0.167", features = ["serde_derive"] }
+serde_json = "1.0.100"
+wild = "2.1.0"
+
+[profile.release]
+codegen-units = 1
+lto = true

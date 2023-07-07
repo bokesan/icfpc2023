@@ -1,5 +1,7 @@
 use std::fmt;
 use std::ops;
+use serde::{Deserialize, Serialize};
+
 
 // This code for Point and Vector has been snarfed from
 // https://github.com/redox-os/rusttype/blob/master/src/geometry.rs
@@ -19,7 +21,7 @@ use std::ops;
 /// # let t = 0.5; let p0 = point(0.0, 0.0); let p1 = point(0.0, 0.0);
 /// let interpolated_point = p0 + (p1 - p0) * t;
 /// ```
-#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Point<N> {
     pub x: N,
     pub y: N,
