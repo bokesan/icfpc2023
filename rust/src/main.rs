@@ -37,14 +37,14 @@ fn main() {
 		println!("Processing problem {} ({}) ...", id, f);
 		let problem = Problem::from_file(&f).unwrap();
 		println!("  Problem loaded. Musicians: {}, attendees: {}", problem.musicians.len(), problem.attendees.len());
-		match solve_fixed(&problem) {
-			None => println!("No scoring solution found :-("),
-			Some(placements) => {
-				let solution = Solution { placements };
-				let ofn = format!("solution-{}.json", id);
-				let mut w = File::create(ofn).unwrap();
-				serde_json::to_writer_pretty(w, &solution);
-			}
+		let (score, placements) = solve_fixed(&problem);
+		if score <= 0.0 {
+			println!("No scoring solution found :-(");
+		} else {
+			let solution = Solution { placements };
+			let ofn = format!("solution-{}-{}.json", id, score);
+			let mut w = File::create(ofn).unwrap();
+			serde_json::to_writer_pretty(w, &solution);
 		}
 	}
 }

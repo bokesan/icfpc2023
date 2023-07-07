@@ -143,7 +143,7 @@ fn mutate(v: &Vec<(Point<f64>, Vec<bool>)>) -> Vec<(Point<f64>, Vec<bool>)> {
     r
 }
 
-pub fn solve_fixed(problem: &Problem) -> Option<Vec<Point<f64>>> {
+pub fn solve_fixed(problem: &Problem) -> (f64, Vec<Point<f64>>) {
     let timeout = Duration::from_secs(120);
     let start = Instant::now();
     let r = make_positions(problem, 2);
@@ -162,9 +162,5 @@ pub fn solve_fixed(problem: &Problem) -> Option<Vec<Point<f64>>> {
         }
     }
     println!("{} mutations tested. Final score: {}", perms, s);
-    if s > 0.0 {
-        Some(ar.iter().map(|x| x.0).collect())
-    } else {
-        None
-    }
+    (s, ar.iter().map(|x| x.0).collect())
 }
