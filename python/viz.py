@@ -99,18 +99,22 @@ if plot:
 
 
 # copied from simple solver
-placements = []
-x = problem['stage_bottom_left'][0] + 10
-y = problem['stage_bottom_left'][1] + 10
-for i in range(len(problem['musicians'])):
-    if y > problem['stage_height'] + problem['stage_bottom_left'][1] - 10:
-        print("not enough space")
-        sys.exit(1)
-    placements.append({"x": x, "y": y})
-    x = x + 10
-    if x > problem['stage_width'] + problem['stage_bottom_left'][0] - 10:
-        x = problem['stage_bottom_left'][0] + 10
-        y = y + 10
+def simple_solver(problem):
+    placements = []
+    x = problem['stage_bottom_left'][0] + 10
+    y = problem['stage_bottom_left'][1] + 10
+    for i in range(len(problem['musicians'])):
+        if y > problem['stage_height'] + problem['stage_bottom_left'][1] - 10:
+            print("not enough space")
+            return []
+        placements.append({"x": x, "y": y})
+        x = x + 10
+        if x > problem['stage_width'] + problem['stage_bottom_left'][0] - 10:
+            x = problem['stage_bottom_left'][0] + 10
+            y = y + 10
+    return placements
+
+placements = simple_solver(problem)
     
 # musicians
 if plot:
