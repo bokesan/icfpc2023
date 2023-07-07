@@ -66,6 +66,11 @@ fn make_positions(problem: &Problem, mut rows: u32) -> Vec<Point<f64>> {
             x = x + x_step;
         }
     }
+    for p in &positions {
+        if p.x - xoffs < 10.0 || p.y - yoffs < 10.0 || problem.stage_width - p.x < 10.0 || problem.stage_height - p.y < 10.0 {
+            panic!("Too close to edge of stage: {}", p);
+        }
+    }
     positions
 }
 
@@ -138,7 +143,7 @@ fn mutate(v: &Vec<(Point<f64>, Vec<bool>)>) -> Vec<(Point<f64>, Vec<bool>)> {
     r
 }
 
-pub fn solve_fixed(problem: &Problem) -> Vec<Point<f64>> {
+pub fn solve_fixed(problem: &Problem) -> Option<Vec<Point<f64>>> {
     let timeout = Duration::from_secs(120);
     let start = Instant::now();
     let r = make_positions(problem, 2);
@@ -157,5 +162,9 @@ pub fn solve_fixed(problem: &Problem) -> Vec<Point<f64>> {
         }
     }
     println!("{} mutations tested. Final score: {}", perms, s);
-    ar.iter().map(|x| x.0).collect()
+    if s > 0.0 {
+        Some(ar.iter().map(|x| x.0).collect())
+    } else {
+        None
+    }
 }
