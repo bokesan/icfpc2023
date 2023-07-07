@@ -18,10 +18,17 @@ def load_problem(path):
         problem = json.loads(problem_string)
 
 if len(sys.argv) < 2:
-    print("Usage: python viz.py <problem-file>")
+    print("Usage: python viz.py [-batch] <problem-file>")
     sys.exit(1)
-        
-load_problem(sys.argv[1])
+
+plot = True
+argIndex = 1
+
+if sys.argv[1] == "-batch":
+    plot = False
+    argIndex = 2
+    
+load_problem(sys.argv[argIndex])
 
 def is_blocked(placements, musician_index, attendee):
     attendee_pos = [attendee['x'], attendee['y']]
@@ -87,7 +94,8 @@ def plot_problem(problem):
     for a in problem['attendees']:
         plt.plot([a['x']], [a['y']], "ro")
 
-plot_problem(problem)
+if plot:
+    plot_problem(problem)
 
 
 # copied from simple solver
@@ -105,12 +113,13 @@ for i in range(len(problem['musicians'])):
         y = y + 10
     
 # musicians
-for p in placements:
-    plt.plot([p['x']], [p['y']], "go")
-
-plt.show()
+if plot:
+    for p in placements:
+        plt.plot([p['x']], [p['y']], "go")
+    plt.show()
 
 print(f'{len(placements)} musicians placed')
+print("Computing score...")
 print(f'Score: {score(problem, placements)}')
 
 solution = {'placements' : placements}
