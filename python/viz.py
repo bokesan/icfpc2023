@@ -5,6 +5,7 @@ import os
 import json
 
 from geometry import line_circle_intersect
+from fixed_place_solver import solve_fixed
 
 # max. window size in inches?
 win_size = 10
@@ -114,8 +115,11 @@ def simple_solver(problem):
             y = y + 10
     return placements
 
-placements = simple_solver(problem)
-    
+placements = solve_fixed(problem)
+if len(placements) != len(problem['musicians']):
+    print("Bug in solver: wrong number of placements returned")
+    sys.exit(1)
+
 # musicians
 if plot:
     for p in placements:

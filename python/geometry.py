@@ -8,14 +8,19 @@ def point_diff(a, b):
 def dot(a, b):
     return a[0] * b[0] + a[1] * b[1]
 
+def dotself(a):
+    x = a[0]
+    y = a[1]
+    return x*x + y*y
+
 # line segment - circle intersection
 # copies from: https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
 def line_circle_intersect(E, L, C, r):
     d = point_diff(L, E)
     f = point_diff(E, C)
-    a = dot(d, d)
+    a = dotself(d)
     b = 2 * dot(f, d)
-    c = dot(f, f) - r*r
+    c = dotself(f) - r*r
     discriminant = b*b-4*a*c
     if discriminant < 0:
         return False
@@ -27,8 +32,9 @@ def line_circle_intersect(E, L, C, r):
         # either solution may be on or off the ray so need to test both
         # t1 is always the smaller value, because BOTH discriminant and
         # a are nonnegative.
-        t1 = (-b - discriminant)/(2*a)
-        t2 = (-b + discriminant)/(2*a)
+        a2 = 2*a
+        t1 = (-b - discriminant)/a2
+        t2 = (-b + discriminant)/a2
 
         # 3x HIT cases:
         #          -o->             --|-->  |            |  --|->
