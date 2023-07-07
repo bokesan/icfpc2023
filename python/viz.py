@@ -132,7 +132,7 @@ s = score(problem, placements)
 print(f'Score: {s}')
 
 solution = {'placements' : placements}
-with open('placements.json', 'w') as fp:
+with open(sys.argv[argIndex + 1], 'w') as fp:
     json.dump(solution, fp)
-print("placements written to 'placements.json'")
+print(f"placements written to '{sys.argv[argIndex+1]}'")
 

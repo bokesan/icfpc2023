@@ -98,19 +98,35 @@ def score(problem, placements):
         sum = sum + happiness(ai, problem, placements)
     return sum
 
-max_time = 120
+max_time = 300
+
+def swap_n(xs, n):
+    m = len(xs)
+    r = xs.copy()
+    for c in range(n):
+        i1 = random.randrange(m)
+        i2 = random.randrange(m)
+        if i1 != i2:
+            t = r[i1]
+            r[i1] = r[i2]
+            r[i2] = t
+    return r
 
 def solve_fixed(problem):
-    start_time = time.time()
     r = make_positions(problem, 2)
     print("Precomputing line-of-sound...")
     annotate_with_los(problem, r)
     s = score(problem, r)
     print(f"Initial score: {s}")
+    start_time = time.time()
     perms = 1
+    if len(r) >= 1:
+        num_to_swap = 1
+    else:
+        num_to_swap = 3
     while (time.time() - start_time) < max_time:
         perms = perms + 1
-        r2 = random.sample(r, len(r))
+        r2 = swap_n(r, num_to_swap)
         s2 = score(problem, r2)
         if s2 > s:
             print(f"Score improved: {s2}")
