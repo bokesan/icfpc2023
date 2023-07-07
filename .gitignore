@@ -1,2 +1,4 @@
+*~
 sol*.json
 problem*.json
+__pycache__/
