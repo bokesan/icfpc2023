@@ -51,9 +51,9 @@ def happiness(a,problem,placements):
     sum = 0
     ms = problem['musicians']
     for k in range(len(ms)):
-        if not is_blocked(placements, i, a):
-            place = placements[i]
-            instrument = ms[i]
+        if not is_blocked(placements, k, a):
+            place = placements[k]
+            instrument = ms[k]
             sum = sum + happiness1(a, place, instrument)
     return sum
 
@@ -119,8 +119,9 @@ if plot:
     plt.show()
 
 print(f'{len(placements)} musicians placed')
-print("Computing score...")
-print(f'Score: {score(problem, placements)}')
+print(f"Computing score for {len(problem['attendees'])} attendees ...")
+s = score(problem, placements)
+print(f'Score: {s}')
 
 solution = {'placements' : placements}
 with open('placements.json', 'w') as fp:
