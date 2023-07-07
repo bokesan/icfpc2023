@@ -1,4 +1,6 @@
+import math
 import matplotlib.pyplot as plt
+import sys
 import os
 import json
 
@@ -13,9 +15,39 @@ def load_problem(path):
         problem_string = json.load(f)
         problem = json.loads(problem_string)
 
-load_problem(os.path.expanduser('~/Dropbox/ICFP/2023/problems/problem-1.json'))
+if len(sys.argv) < 2:
+    print("Usage: python viz.py <problem-file>")
+    sys.exit(1)
+        
+load_problem(sys.argv[1])
 
+def is_blocked(placements, musician_index, attendee):
+    # TODO
+    return False
 
+def happiness1(a,m,instrument):
+    # d = math.dist([a['x'],a['y']], [m['x'],m['y']])
+    dx = a['x'] - m['x']
+    dy = a['y'] - m['y']
+    d2 = dx*dx + dy*dy
+    return math.ceil(1000000.0 * a['tastes'][instrument] / d2)
+
+def happiness(a,problem,placements):
+    sum = 0
+    ms = problem['musicians']
+    for k in range(len(ms)):
+        if not is_blocked(placements, i, a):
+            place = placements[i]
+            instrument = ms[i]
+            sum = sum + happiness1(a, place, instrument)
+    return sum
+
+def score(problem, placements):
+    sum = 0
+    for a in problem['attendees']:
+        sum = sum + happiness(a, problem, placements)
+    return sum
+            
 def plot_rect(bl, tr, col):
     x0 = bl[0]
     x1 = tr[0]
@@ -53,7 +85,7 @@ plot_problem(problem)
 num_musicians = len(problem['musicians'])
 placements = []
 pos = {'x': problem['stage_bottom_left'][0] + 20, 'y': problem['stage_bottom_left'][1] + 12}
-print(f'Placing all musiciants at {pos} (illegal, I know)')
+print(f'Placing all musicians at {pos} (illegal, I know)')
 for i in range(num_musicians):
     placements.append(pos)
     
@@ -62,3 +94,11 @@ for p in placements:
     plt.plot([p['x']], [p['y']], "go")
 
 plt.show()
+    
+print(f'Score (blocking not implemented): {score(problem, placements)}')
+
+solution = {'placements' : placements}
+with open('placements.json', 'w') as fp:
+    json.dump(solution, fp)
+print("placements written to 'placements.json'")
+
