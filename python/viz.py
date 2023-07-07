@@ -44,8 +44,8 @@ def happiness1(a,m,instrument):
     # d = math.dist([a['x'],a['y']], [m['x'],m['y']])
     dx = a['x'] - m['x']
     dy = a['y'] - m['y']
-    d2 = dx*dx + dy*dy
-    return math.ceil(1000000.0 * a['tastes'][instrument] / d2)
+    d = math.sqrt(dx*dx + dy*dy)
+    return math.ceil(1000000.0 * a['tastes'][instrument] / (d*d))
 
 def happiness(a,problem,placements):
     sum = 0
