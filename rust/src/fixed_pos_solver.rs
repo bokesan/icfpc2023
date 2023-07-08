@@ -15,11 +15,11 @@ fn make_positions(problem: &Problem, mut rows: u32) -> Vec<Point<f64>> {
     let max_rows: u32;
     let max_per_row: u32;
     if wide {
-        max_rows = problem.stage_width as u32 / 10 - 1;
-        max_per_row = problem.stage_height as u32 / 10 - 1;
+        max_rows = (problem.stage_width / 10.0).floor() as u32 - 1;
+        max_per_row = (problem.stage_height / 10.0).floor() as u32 - 1;
     } else {
-        max_rows = problem.stage_height as u32 / 10 - 1;
-        max_per_row = problem.stage_width as u32 / 10 - 1;
+        max_per_row = (problem.stage_height / 10.0).floor() as u32 - 1;
+        max_rows = (problem.stage_width / 10.0).floor() as u32 - 1;
     }
     if rows > max_rows {
         println!("Stage too small: reducing rows from {} to {}.", rows, max_rows);
@@ -37,16 +37,23 @@ fn make_positions(problem: &Problem, mut rows: u32) -> Vec<Point<f64>> {
     if n_per_row * rows > n as u32 {
         println!("  (Last row only {})", n as u32 - n_per_row * (rows - 1));
     }
-    let xoffs = problem.stage_bottom_left[0];
-    let yoffs = problem.stage_bottom_left[1];
+    let blx = problem.stage_bottom_left[0];
+    let bly = problem.stage_bottom_left[1];
     if wide {
         let x_step = problem.stage_width / (n_per_row + 1) as f64;
         let y_step = problem.stage_height / (rows + 1) as f64;
+        if x_step < 10.0 || y_step < 10.0 {
+            panic!("step size too small (wide): {}, {}", x_step, y_step);
+        }
         let mut y = y_step;
         for _r in 0..rows {
             let mut x = x_step;
             for _c in 0..n_per_row {
-                positions.push(point(x+xoffs, y+yoffs));
+                let p = point(x + blx, y + bly);
+                if !on_stage(problem, &p) {
+                    panic!("not on stage: {}", p);
+                }
+                positions.push(p);
                 if positions.len() == n {
                     return positions;
                 }
@@ -57,11 +64,18 @@ fn make_positions(problem: &Problem, mut rows: u32) -> Vec<Point<f64>> {
     } else {
         let x_step = problem.stage_width / (rows + 1) as f64;
         let y_step = problem.stage_height / (n_per_row + 1) as f64;
+        if x_step < 10.0 || y_step < 10.0 {
+            panic!("step size too small (tall): {}, {}", x_step, y_step);
+        }
         let mut x = x_step;
         for _c in 0..rows {
             let mut y = y_step;
             for _r in 0..n_per_row {
-                positions.push(point(x+xoffs, y+yoffs));
+                let p = point(x + blx, y + bly);
+                if !on_stage(problem, &p) {
+                    panic!("not on stage: {}", p);
+                }
+                positions.push(p);
                 if positions.len() == n {
                     return positions;
                 }
@@ -70,21 +84,16 @@ fn make_positions(problem: &Problem, mut rows: u32) -> Vec<Point<f64>> {
             x = x + x_step;
         }
     }
-    for p in &positions {
-        if !on_stage(problem, p) {
-            panic!("Too close to edge of stage: {}", p);
-        }
-    }
     positions
 }
 
 fn on_stage(problem: &Problem, p: &Point<f64>) -> bool {
-    let xoffs = problem.stage_bottom_left[0];
-    let yoffs = problem.stage_bottom_left[1];
-    p.x - xoffs >= 10.0
-        && p.y - yoffs >= 10.0
-        && problem.stage_width - p.x >= 10.0
-        && problem.stage_height - p.y >= 10.0
+    let blx = problem.stage_bottom_left[0];
+    let bly = problem.stage_bottom_left[1];
+    p.x >= blx + 10.0
+        && p.y >= bly + 10.0
+        && p.x <= problem.stage_width + blx - 10.0
+        && p.y <= problem.stage_height + bly - 10.0
 }
 
 fn is_blocked(placements: &Vec<Point<f64>>, musician_index: usize, attendee: &Attendee) -> bool {
@@ -197,6 +206,7 @@ pub fn solve_fixed(problem: &Problem) -> (f64, Vec<Point<f64>>) {
     let timeout = Duration::from_secs(120);
     let start = Instant::now();
     let r = make_positions(problem, 2);
+
     println!("Precomputing line-of-sound...");
     let mut ar = annotate_with_los(problem, &r);
     let mut s = score(problem, &ar);
