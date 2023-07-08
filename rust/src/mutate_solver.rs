@@ -104,65 +104,70 @@ fn is_blocked(placements: &Vec<Point<f64>>, musician_index: usize, attendee: &At
     false
 }
 
-fn annotate_with_los(problem: &Problem, positions: &Vec<Point<f64>>) -> Vec<(Point<f64>, Vec<bool>)> {
-    let mut result = Vec::with_capacity(positions.len());
-    let na = problem.attendees.len();
-    for (i, p) in positions.iter().enumerate() {
-        let mut visible = Vec::with_capacity(na);
-        for a in &problem.attendees {
-            visible.push(!is_blocked(positions, i, a));
-        }
-        result.push((*p, visible));
-    }
-    result
-}
-
-fn happiness1(att: &Attendee, mus: Point<f64>, instrument: usize) -> f64 {
+fn happiness1(att: &Attendee, mus: &Point<f64>, instrument: usize) -> f64 {
     let dx = att.x - mus.x;
     let dy = att.y - mus.y;
     let d = (dx * dx + dy * dy).sqrt();
     (1000000.0 * att.tastes[instrument] / (d*d)).ceil()
 }
 
-fn happiness(attendee_index: usize, problem: &Problem, ann_placements: &Vec<(Point<f64>, Vec<bool>)>) -> f64 {
+fn happiness(attendee_index: usize, problem: &Problem, placements: &Vec<Point<f64>>) -> f64 {
     let mut sum = 0.0;
     let ms = &problem.musicians;
     let a = &problem.attendees[attendee_index];
-    for (k, place) in ann_placements.iter().enumerate() {
-        if place.1[attendee_index] {
+    for (k, place) in placements.iter().enumerate() {
+        if !is_blocked(placements, k, a) {
             let instrument = ms[k];
-            sum = sum + happiness1(a, place.0, instrument as usize);
+            sum = sum + happiness1(a, place, instrument as usize);
         }
     }
     sum
 }
 
-fn score(problem: &Problem, ann_placements: &Vec<(Point<f64>, Vec<bool>)>) -> f64 {
-    if ann_placements.len() != problem.musicians.len() {
+fn score(problem: &Problem, placements: &Vec<Point<f64>>) -> f64 {
+    if placements.len() != problem.musicians.len() {
         panic!("Fatal error: wrong placements length. musicians: {}, placements: {}",
-               problem.musicians.len(), ann_placements.len());
+               problem.musicians.len(), placements.len());
     }
     let mut sum = 0.0;
     for ai in 0 .. problem.attendees.len() {
-        sum = sum + happiness(ai, problem, ann_placements);
+        sum = sum + happiness(ai, problem, placements);
     }
     sum
 }
 
-// TODO: introduce other mutations, in particular moving a musician
-fn mutate(v: &Vec<(Point<f64>, Vec<bool>)>) -> Vec<(Point<f64>, Vec<bool>)> {
+fn mutate(problem: &Problem, v: &Vec<Point<f64>>) -> Vec<Point<f64>> {
     let mut r = v.to_vec();
     let mut rng = rand::thread_rng();
     let n = v.len();
     let mut mutated = false;
-    // flip two musicians
-    let i1 = rng.gen_range(0..n);
-    while !mutated {
-        let i2 = rng.gen_range(0..n);
-        if i1 != i2 {
-            r[i1] = v[i2].clone();
-            r[i2] = v[i1].clone();
-            mutated = true;
+    if rng.gen_range(0..2) == 0 {
+        // flip two musicians
+        let i1 = rng.gen_range(0..n);
+        while !mutated {
+            let i2 = rng.gen_range(0..n);
+            if i1 != i2 {
+                r[i1] = v[i2].clone();
+                r[i2] = v[i1].clone();
+                mutated = true;
+            }
+        }
+    } else {
+        // move musician
+        let mut count = 100;
+        while !mutated  && count > 0 {
+            let i1 = rng.gen_range(0..n);
+            let xoffs = rng.gen_range(0..11) as f64 - 5.0;
+            let yoffs = rng.gen_range(0..11) as f64 - 5.0;
+            let np = r[i1].add(vector(xoffs, yoffs));
+            if on_stage(problem, &np) && distance_to_others_ok(&np, i1, &r) {
+                r[i1] = np;
+                mutated = true;
+            }
+            count = count - 1;
+        }
+        if count == 0 {
+            println!("no valid move found");
         }
     }
     r
@@ -174,34 +179,31 @@ fn pt_distance_squared(p: &Point<f64>, q: &Point<f64>) -> f64 {
     dx * dx + dy * dy
 }
 
-fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &Vec<(Point<f64>, Vec<bool>)>) -> bool {
+fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &Vec<Point<f64>>) -> bool {
     for (k,e) in pts.iter().enumerate() {
-        if k != i && pt_distance_squared(&p, &e.0) < 100.0 {
+        if k != i && pt_distance_squared(&p, &e) < 100.0 {
             return false
         }
     }
     true
 }
 
-pub fn solve_fixed(problem: &Problem) -> (f64, Vec<Point<f64>>) {
-    let timeout = Duration::from_secs(120);
+pub fn solve(problem: &Problem) -> (f64, Vec<Point<f64>>) {
+    let timeout = Duration::from_secs(300);
     let start = Instant::now();
-    let r = make_positions(problem, 2);
-
-    println!("Precomputing line-of-sound...");
-    let mut ar = annotate_with_los(problem, &r);
-    let mut s = score(problem, &ar);
+    let mut r = make_positions(problem, 2);
+    let mut s = score(problem, &r);
     println!("Initial score: {}", s);
     let mut perms: u64 = 1;
     while start.elapsed() < timeout {
         perms = perms + 1;
-        let r2 = mutate(&ar);
+        let r2 = mutate(problem, &r);
         let s2 = score(problem, &r2);
         if s2 > s {
-            ar = r2;
+            r = r2;
             s = s2;
         }
     }
     println!("{} mutations tested. Final score: {}", perms, s);
-    (s, ar.iter().map(|x| x.0).collect())
+    (s, r)
 }

@@ -2,10 +2,10 @@ mod geometry;
 mod problem;
 mod intersect;
 mod fixed_pos_solver;
+mod mutate_solver;
 
 use std::fs::File;
 use regex::Regex;
-use crate::fixed_pos_solver::solve_fixed;
 
 use crate::problem::{Problem, Solution};
 
@@ -38,7 +38,7 @@ fn main() {
 		}
 		let problem = Problem::from_file(&f).unwrap();
 		println!("Problem {} loaded. Musicians: {}, attendees: {}", id, problem.musicians.len(), problem.attendees.len());
-		let (score, placements) = solve_fixed(&problem);
+		let (score, placements) = mutate_solver::solve(&problem);
 		if score <= 0.0 {
 			println!("No scoring solution found :-(");
 		} else {
