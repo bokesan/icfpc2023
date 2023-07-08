@@ -5,7 +5,6 @@ mod fixed_pos_solver;
 
 use std::fs::File;
 use regex::Regex;
-use std::time::Instant;
 use crate::fixed_pos_solver::solve_fixed;
 
 use crate::problem::{Problem, Solution};
@@ -34,17 +33,19 @@ fn main() {
 			None => panic!("unable to get solution id"),
 			Some(caps) => caps.get(1).unwrap().as_str().parse::<u32>().unwrap()
 		};
-		println!("Processing problem {} ({}) ...", id, f);
+		if verbose {
+			println!("Processing problem {} ({}) ...", id, f);
+		}
 		let problem = Problem::from_file(&f).unwrap();
-		println!("  Problem loaded. Musicians: {}, attendees: {}", problem.musicians.len(), problem.attendees.len());
+		println!("Problem {} loaded. Musicians: {}, attendees: {}", id, problem.musicians.len(), problem.attendees.len());
 		let (score, placements) = solve_fixed(&problem);
 		if score <= 0.0 {
 			println!("No scoring solution found :-(");
 		} else {
 			let solution = Solution { placements };
 			let ofn = format!("solution-{}-{}.json", id, score);
-			let mut w = File::create(ofn).unwrap();
-			serde_json::to_writer_pretty(w, &solution);
+			let w = File::create(ofn).unwrap();
+			let _ = serde_json::to_writer_pretty(w, &solution);
 		}
 	}
 }
