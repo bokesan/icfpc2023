@@ -168,7 +168,7 @@ fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>) -> Vec<(Point<f64
             let xoffs = rng.gen_range(0..11) as f64 - 5.0;
             let yoffs = rng.gen_range(0..11) as f64 - 5.0;
             let np = r[i1].0.add(vector(xoffs, yoffs));
-            if on_stage(problem, &np) && distance_to_others_ok(i1, &r) {
+            if on_stage(problem, &np) && distance_to_others_ok(&np, i1, &r) {
                 r[i1] = (np, r[i1].1.clone());
                 mutated = true;
             }
@@ -178,10 +178,15 @@ fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>) -> Vec<(Point<f64
     r
 }
 
-fn distance_to_others_ok(i: usize, pts: &Vec<(Point<f64>, Vec<bool>)>) -> bool {
-    let p = pts[i].0;
+fn pt_distance_squared(p: &Point<f64>, q: &Point<f64>) -> f64 {
+    let dx = p.x - q.x;
+    let dy = p.y - q.y;
+    dx * dx + dy * dy
+}
+
+fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &Vec<(Point<f64>, Vec<bool>)>) -> bool {
     for (k,e) in pts.iter().enumerate() {
-        if k != i && (p - e.0).length_squared() < 100.0 {
+        if k != i && pt_distance_squared(&p, &e.0) < 100.0 {
             return false
         }
     }
