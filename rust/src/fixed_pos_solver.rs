@@ -1,6 +1,10 @@
+// the name fixed_pos_solver is no longer correct
+// since positions are mutated, too
+
+use std::ops::Add;
 use std::time::{Duration, Instant};
 use rand::Rng;
-use crate::geometry::{Point, point};
+use crate::geometry::{Point, point, vector};
 use crate::intersect::line_circle_intersect;
 use crate::problem::{Attendee, Problem};
 
@@ -67,11 +71,20 @@ fn make_positions(problem: &Problem, mut rows: u32) -> Vec<Point<f64>> {
         }
     }
     for p in &positions {
-        if p.x - xoffs < 10.0 || p.y - yoffs < 10.0 || problem.stage_width - p.x < 10.0 || problem.stage_height - p.y < 10.0 {
+        if !on_stage(problem, p) {
             panic!("Too close to edge of stage: {}", p);
         }
     }
     positions
+}
+
+fn on_stage(problem: &Problem, p: &Point<f64>) -> bool {
+    let xoffs = problem.stage_bottom_left[0];
+    let yoffs = problem.stage_bottom_left[1];
+    p.x - xoffs >= 10.0
+        && p.y - yoffs >= 10.0
+        && problem.stage_width - p.x >= 10.0
+        && problem.stage_height - p.y >= 10.0
 }
 
 fn is_blocked(placements: &Vec<Point<f64>>, musician_index: usize, attendee: &Attendee) -> bool {
@@ -130,17 +143,49 @@ fn score(problem: &Problem, ann_placements: &Vec<(Point<f64>, Vec<bool>)>) -> f6
     sum
 }
 
-fn mutate(v: &Vec<(Point<f64>, Vec<bool>)>) -> Vec<(Point<f64>, Vec<bool>)> {
+// TODO: introduce other mutations, in particular moving a musician
+fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>) -> Vec<(Point<f64>, Vec<bool>)> {
     let mut r = v.to_vec();
     let mut rng = rand::thread_rng();
     let n = v.len();
-    let i1 = rng.gen_range(0..n);
-    let i2 = rng.gen_range(0..n);
-    if i1 != i2 {
-        r[i1] = v[i2].clone();
-        r[i2] = v[i1].clone();
+    let mut mutated = false;
+    if rng.gen_range(0..2) == 0 {
+        // flip two musicians
+        let i1 = rng.gen_range(0..n);
+        while !mutated {
+            let i2 = rng.gen_range(0..n);
+            if i1 != i2 {
+                r[i1] = v[i2].clone();
+                r[i2] = v[i1].clone();
+                mutated = true;
+            }
+        }
+    } else {
+        // move musician
+        let mut count = 100;
+        while !mutated  && count > 0 {
+            let i1 = rng.gen_range(0..n);
+            let xoffs = rng.gen_range(0..11) as f64 - 5.0;
+            let yoffs = rng.gen_range(0..11) as f64 - 5.0;
+            let np = r[i1].0.add(vector(xoffs, yoffs));
+            if on_stage(problem, &np) && distance_to_others_ok(i1, &r) {
+                r[i1] = (np, r[i1].1.clone());
+                mutated = true;
+            }
+            count = count - 1;
+        }
     }
     r
+}
+
+fn distance_to_others_ok(i: usize, pts: &Vec<(Point<f64>, Vec<bool>)>) -> bool {
+    let p = pts[i].0;
+    for (k,e) in pts.iter().enumerate() {
+        if k != i && (p - e.0).length_squared() < 100.0 {
+            return false
+        }
+    }
+    true
 }
 
 pub fn solve_fixed(problem: &Problem) -> (f64, Vec<Point<f64>>) {
@@ -154,7 +199,7 @@ pub fn solve_fixed(problem: &Problem) -> (f64, Vec<Point<f64>>) {
     let mut perms: u64 = 1;
     while start.elapsed() < timeout {
         perms = perms + 1;
-        let r2 = mutate(&ar);
+        let r2 = mutate(problem, &ar);
         let s2 = score(problem, &r2);
         if s2 > s {
             ar = r2;
