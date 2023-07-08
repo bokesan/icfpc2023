@@ -22,7 +22,7 @@ def line_circle_intersect(E, L, C, r):
     b = 2 * dot(f, d)
     c = dotself(f) - r*r
     discriminant = b*b-4*a*c
-    if discriminant < 0:
+    if discriminant <= 0:
         return False
     else:
         # ray didn't totally miss sphere,
@@ -58,3 +58,14 @@ def line_circle_intersect(E, L, C, r):
   
         # no intn: FallShort, Past, CompletelyInside
         return False
+
+def test():
+    p = [1,1]
+    q = [10,1]
+    c = [5, 6]
+    if line_circle_intersect(p, q, c, 4):
+        print(f"error: r=4 should not intersect")
+    if not line_circle_intersect(p, q, c, 6):
+        print(f"error: r=6 should definitely intersect")
+    res = line_circle_intersect(p, q, c, 5)
+    print(f"Intersection at one point: {res}")

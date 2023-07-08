@@ -5,47 +5,46 @@ use crate::geometry::{Point, point, vector};
 use crate::intersect::line_circle_intersect;
 use crate::problem::{Attendee, Problem};
 
-fn make_positions(problem: &Problem, mut rows: u32) -> Vec<Point<f64>> {
+fn make_positions(problem: &Problem) -> Vec<Point<f64>> {
     let n = problem.musicians.len();
     let mut positions = Vec::with_capacity(n);
-    let wide = problem.stage_width >= problem.stage_height;
-    let max_rows: u32;
-    let max_per_row: u32;
-    if wide {
-        max_rows = (problem.stage_width / 10.0).floor() as u32 - 1;
-        max_per_row = (problem.stage_height / 10.0).floor() as u32 - 1;
-    } else {
-        max_per_row = (problem.stage_height / 10.0).floor() as u32 - 1;
-        max_rows = (problem.stage_width / 10.0).floor() as u32 - 1;
+    let max_rows = (problem.stage_height / 10.0).floor() as i32 - 1;
+    let max_cols = (problem.stage_width / 10.0).floor() as i32 - 1;
+
+    // r * c == n
+    println!("stage size: {} x {}", problem.stage_width, problem.stage_height);
+    let mut c = ((n as f64).sqrt() * problem.stage_width.sqrt() / problem.stage_height.sqrt()) as i32;
+    let mut r = ((n as f64).sqrt() * problem.stage_height.sqrt() / problem.stage_width.sqrt()) as i32;
+    println!("calc: {} x {} = {}", c, r, c*r);
+    if c == 0 {
+        c = 1;
+        r = n as i32;
+    } else if r == 0 {
+        r = 1;
+        c = n as i32;
     }
-    if rows > max_rows {
-        println!("Stage too small: reducing rows from {} to {}.", rows, max_rows);
-        rows = max_rows;
+    while c < max_cols && c * r < n as i32 {
+        c = c + 1
     }
-    let mut n_per_row = (n as u32 + rows - 1) / rows;
-    while n_per_row > max_per_row {
-        if rows >= max_rows {
-            panic!("Stage too small - bailing out.");
-        }
-        rows = rows + 1;
-        n_per_row = (n as u32 + rows - 1) / rows;
+    while r < max_rows && c * r < n as i32 {
+        r = r + 1
     }
-    println!("Placing {} musicians in {} rows: {} per row.", n, rows, n_per_row);
-    if n_per_row * rows > n as u32 {
-        println!("  (Last row only {})", n as u32 - n_per_row * (rows - 1));
+
+    if c * r < n as i32 {
+        panic!("Stage too small - bailing out.");
     }
+    println!("Placing {} musicians in {}x{} grid.", n, c, r);
     let blx = problem.stage_bottom_left[0];
     let bly = problem.stage_bottom_left[1];
-    if wide {
-        let x_step = problem.stage_width / (n_per_row + 1) as f64;
-        let y_step = problem.stage_height / (rows + 1) as f64;
+        let x_step = problem.stage_width / (c + 1) as f64;
+        let y_step = problem.stage_height / (r + 1) as f64;
         if x_step < 10.0 || y_step < 10.0 {
             panic!("step size too small (wide): {}, {}", x_step, y_step);
         }
         let mut y = y_step;
-        for _r in 0..rows {
+        for _r in 0..r {
             let mut x = x_step;
-            for _c in 0..n_per_row {
+            for _c in 0..c {
                 let p = point(x + blx, y + bly);
                 if !on_stage(problem, &p) {
                     panic!("not on stage: {}", p);
@@ -58,29 +57,6 @@ fn make_positions(problem: &Problem, mut rows: u32) -> Vec<Point<f64>> {
             }
             y = y + y_step;
         }
-    } else {
-        let x_step = problem.stage_width / (rows + 1) as f64;
-        let y_step = problem.stage_height / (n_per_row + 1) as f64;
-        if x_step < 10.0 || y_step < 10.0 {
-            panic!("step size too small (tall): {}, {}", x_step, y_step);
-        }
-        let mut x = x_step;
-        for _c in 0..rows {
-            let mut y = y_step;
-            for _r in 0..n_per_row {
-                let p = point(x + blx, y + bly);
-                if !on_stage(problem, &p) {
-                    panic!("not on stage: {}", p);
-                }
-                positions.push(p);
-                if positions.len() == n {
-                    return positions;
-                }
-                y = y + y_step;
-            }
-            x = x + x_step;
-        }
-    }
     positions
 }
 
@@ -219,9 +195,9 @@ fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &Vec<(Point<f64>, Vec<bo
 }
 
 pub fn solve(problem: &Problem) -> (f64, Vec<Point<f64>>) {
-    let timeout = Duration::from_secs(300);
+    let timeout = Duration::from_secs(100);
     let start = Instant::now();
-    let r = make_positions(problem, 2);
+    let r = make_positions(problem);
     let mut ar = annotate_with_los(problem, &r);
     let mut s = score(problem, &ar);
     println!("Initial score: {}", s);

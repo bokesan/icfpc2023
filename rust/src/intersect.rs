@@ -11,12 +11,9 @@ pub fn line_circle_intersect(e: Point<f64>, l: Point<f64>, c: Point<f64>, r: f64
     let b = 2.0 * dot(f, d);
     let c1 = dot(f, f) - r * r;
     let mut disc = b * b - 4.0 * a * c1;
-    if disc < 0.0 {
+    if disc <= 0.0 {
         false
     } else {
-        if touch(e, l, c, r) {
-            return false
-        }
         disc = disc.sqrt();
         let t1 = (-b - disc) / (2.0 * a);
         let t2 = (-b + disc) / (2.0 * a);
