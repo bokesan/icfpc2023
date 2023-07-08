@@ -14,12 +14,18 @@ def load_solution(path):
     with open(path, 'r') as f:
         solution = json.load(f)
         return solution['placements']
-def is_blocked(placements, musician_index, attendee):
+
+def is_blocked(problem, placements, musician_index, attendee):
     attendee_pos = [attendee['x'], attendee['y']]
     musician_pos = [placements[musician_index]['x'], placements[musician_index]['y']]
     for i in range(len(placements)):
         p = placements[i]
         if i != musician_index and line_circle_intersect(attendee_pos, musician_pos, [p['x'], p['y']], 5):
+            return True
+    for p in problem['pillars']:
+        c = p['center']
+        c = [c[0], c[1]]
+        if line_circle_intersect(attendee_pos, musician_pos, c, p['radius']):
             return True
     return False
             
@@ -34,7 +40,7 @@ def happiness(a,problem,placements):
     sum = 0
     ms = problem['musicians']
     for k in range(len(ms)):
-        if not is_blocked(placements, k, a):
+        if not is_blocked(problem, placements, k, a):
             place = placements[k]
             instrument = ms[k]
             sum = sum + happiness1(a, place, instrument)
