@@ -12,14 +12,21 @@ pub struct Attendee {
 }
 
 #[derive(Deserialize, Debug)]
+pub struct Pillar {
+    pub center: Vec<f64>,
+    pub radius: f64,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct Problem {
     pub room_width: f64,
     pub room_height: f64,
     pub stage_width: f64,
     pub stage_height: f64,
     pub stage_bottom_left: Vec<f64>,
-    pub musicians: Vec<u32>,
+    pub musicians: Vec<usize>,
     pub attendees: Vec<Attendee>,
+    pub pillars: Vec<Pillar>,
 }
 
 #[derive(Serialize, Debug)]

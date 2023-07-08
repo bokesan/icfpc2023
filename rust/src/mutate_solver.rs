@@ -69,7 +69,7 @@ fn on_stage(problem: &Problem, p: &Point<f64>) -> bool {
         && p.y <= problem.stage_height + bly - 10.0
 }
 
-fn is_blocked(placements: &Vec<Point<f64>>, musician_index: usize, attendee: &Attendee) -> bool {
+fn is_blocked(problem: &Problem, placements: &Vec<Point<f64>>, musician_index: usize, attendee: &Attendee) -> bool {
     let attendee_pos = point(attendee.x, attendee.y);
     let musician_pos = placements[musician_index];
     for (i,p) in placements.iter().enumerate() {
@@ -77,14 +77,29 @@ fn is_blocked(placements: &Vec<Point<f64>>, musician_index: usize, attendee: &At
             return true
         }
     }
+
+    // check pillars
+    for pil in &problem.pillars {
+        let c = point(pil.center[0], pil.center[1]);
+        if line_circle_intersect(attendee_pos, musician_pos, c, pil.radius) {
+            return true
+        }
+    }
     false
 }
 
-fn is_blocked2(placements: &Vec<(Point<f64>, Vec<bool>)>, musician_index: usize, attendee: &Attendee) -> bool {
+fn is_blocked2(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, musician_index: usize, attendee: &Attendee) -> bool {
     let attendee_pos = point(attendee.x, attendee.y);
     let musician_pos = placements[musician_index].0;
     for (i,p) in placements.iter().enumerate() {
         if i != musician_index && line_circle_intersect(attendee_pos, musician_pos, p.0, 5.0) {
+            return true
+        }
+    }
+    // check pillars
+    for pil in &problem.pillars {
+        let c = point(pil.center[0], pil.center[1]);
+        if line_circle_intersect(attendee_pos, musician_pos, c, pil.radius) {
             return true
         }
     }
@@ -95,7 +110,7 @@ fn compute_los(problem: &Problem, positions: &Vec<(Point<f64>, Vec<bool>)>, i: u
     let na = problem.attendees.len();
     let mut visible = Vec::with_capacity(na);
     for a in &problem.attendees {
-        visible.push(!is_blocked2(positions, i, a));
+        visible.push(!is_blocked2(problem, positions, i, a));
     }
     visible
 }
@@ -106,7 +121,7 @@ fn annotate_with_los(problem: &Problem, positions: &Vec<Point<f64>>) -> Vec<(Poi
     for (i, p) in positions.iter().enumerate() {
         let mut visible = Vec::with_capacity(na);
         for a in &problem.attendees {
-            visible.push(!is_blocked(positions, i, a));
+            visible.push(!is_blocked(problem, positions, i, a));
         }
         result.push((*p, visible));
     }
