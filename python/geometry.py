@@ -14,7 +14,7 @@ def dotself(a):
     return x*x + y*y
 
 # line segment - circle intersection
-# copies from: https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
+# copied from: https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
 def line_circle_intersect(E, L, C, r):
     d = point_diff(L, E)
     f = point_diff(E, C)
