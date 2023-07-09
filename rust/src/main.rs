@@ -10,11 +10,43 @@ use regex::Regex;
 
 use crate::problem::{Problem, Solution};
 
+fn usage() {
+	println!("Usage: icfpc [-v] problem-file...");
+	println!("   or: icfpc -score problem-file solution-file");
+	std::process::exit(1);
+}
+
+fn load_problem(f: &String) -> (u32, Problem) {
+	let pre = Regex::new(r"problem-([1-9][0-9]*)\.json$").unwrap();
+	let id: u32 = match pre.captures(&*f) {
+		None => panic!("unable to get solution id"),
+		Some(caps) => caps.get(1).unwrap().as_str().parse::<u32>().unwrap()
+	};
+	let problem = Problem::from_file(&f).unwrap();
+	(id, problem)
+}
+
+fn compute_score(pf: &String, sf: &String) {
+	let (id, problem) = load_problem(pf);
+	let solution = Solution::from_file(sf).unwrap();
+	let score = scoring::score(&problem, &solution.placements, id >= 56);
+	println!("Problem: {}, score: {}", id, score);
+}
+
 fn main() {
     let argv: Vec<String> = wild::args().collect();
 
 	let mut verbose: bool = false;
 	let mut files: Vec<String> = Vec::new();
+
+	if argv.len() >= 2 && &argv[1] == "-score" {
+		if argv.len() != 4 {
+			usage();
+		}
+		compute_score(&argv[2], &argv[3]);
+		return;
+	}
+
 	for f in &argv[1..argv.len()] {
 		if f == "-v" {
 			verbose = true;
@@ -24,23 +56,17 @@ fn main() {
 	}
 
 	if files.len() == 0 {
-		println!("Usage: icfpc [-v] problem-file...");
-		std::process::exit(1);
+		usage();
 	}
 
-	let pre = Regex::new(r"problem-([1-9][0-9]*)\.json$").unwrap();
 	for f in files {
-		let id: u32 = match pre.captures(&*f) {
-			None => panic!("unable to get solution id"),
-			Some(caps) => caps.get(1).unwrap().as_str().parse::<u32>().unwrap()
-		};
+		let (id, problem) = load_problem(&f);
 		if verbose {
 			println!("Processing problem {} ({}) ...", id, f);
 		}
-		let problem = Problem::from_file(&f).unwrap();
 		println!("Problem {} loaded. Musicians: {}, attendees: {}", id, problem.musicians.len(), problem.attendees.len());
 		let (score, placements) = mutate_solver::solve(&problem);
-		let ref_score = scoring::score(&problem, &placements);
+		let ref_score = scoring::score(&problem, &placements, id >= 56);
 		if score == ref_score {
 			println!("Score matches reference score: {}", score);
 		} else {

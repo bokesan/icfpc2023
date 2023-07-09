@@ -29,7 +29,7 @@ pub struct Problem {
     pub pillars: Vec<Pillar>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Solution {
     pub placements: Vec<Point<f64>>,
 }
@@ -44,4 +44,13 @@ impl Problem {
         p
     }
 
+}
+
+impl Solution {
+    pub fn from_file(f: &String) -> Result<Solution> {
+        let file = File::open(f).unwrap();
+        let reader = BufReader::new(file);
+        let s = serde_json::from_reader(reader);
+        s
+    }
 }
