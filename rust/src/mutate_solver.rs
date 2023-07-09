@@ -5,7 +5,7 @@ use rand::Rng;
 
 use crate::geometry::{Point, point, vector};
 use crate::intersect::line_circle_intersect;
-use crate::problem::{Attendee, Problem};
+use crate::problem::{Attendee, Problem, Solution};
 use crate::scoring;
 use crate::scoring::closeness_factors;
 
@@ -219,14 +219,14 @@ fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &Vec<(Point<f64>, Vec<bo
     true
 }
 
-pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -> (f64, Vec<Point<f64>>) {
+pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -> (f64, Solution) {
     let verify = false;
     let timeout = Duration::from_secs(max_time_seconds);
     let start = Instant::now();
     let r = make_positions(problem);
     let mut ar = annotate_with_los(problem, &r);
     let mut s = score(problem, &ar, playing_together);
-    let ref_score = scoring::score(problem, &r, playing_together);
+    let ref_score = scoring::score(problem, &Solution { placements: r, volumes: None }, playing_together);
     if s != ref_score {
         panic!("Bug in solver score computation. Solver: {}, reference: {}", s, ref_score);
     }
@@ -239,7 +239,7 @@ pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -
         let s2 = score(problem, &r2, playing_together);
         if verify {
             let p2 = r2.iter().map(|e| e.0).collect();
-            let ref_s2 = scoring::score(problem, &p2, playing_together);
+            let ref_s2 = scoring::score(problem, &Solution{placements: p2, volumes: None}, playing_together);
             if s2 != ref_s2 {
                 println!("    verify: score wrong. calc={}, ref={}", s2, ref_s2);
             }
@@ -251,5 +251,6 @@ pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -
         }
     }
     println!("{} mutations tested. Final score: {}", perms, s);
-    (s, ar.iter().map(|x| x.0).collect())
+    let volumes = vec![10.0; problem.musicians.len()];
+    (10.0 * s, Solution { placements: ar.iter().map(|x| x.0).collect(), volumes: Some(volumes) })
 }

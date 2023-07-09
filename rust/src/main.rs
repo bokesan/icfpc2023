@@ -31,7 +31,7 @@ fn load_problem(f: &String, verbose: bool) -> (u32, Problem) {
 fn compute_score(pf: &String, sf: &String) {
 	let (id, problem) = load_problem(pf, false);
 	let solution = Solution::from_file(sf).unwrap();
-	let score = scoring::score(&problem, &solution.placements, id >= 56);
+	let score = scoring::score(&problem, &solution, id >= 56);
 	println!("Problem: {}, score: {}", id, score);
 }
 
@@ -74,8 +74,8 @@ fn main() {
 		let (id, problem) = load_problem(&f, verbose);
 		println!("Problem {} loaded. Musicians: {}, attendees: {}", id, problem.musicians.len(), problem.attendees.len());
 		println!("Number of instruments: {}", problem.musicians.iter().max().unwrap());
-		let (score, placements) = mutate_solver::solve(&problem, id >= 56, time);
-		let ref_score = scoring::score(&problem, &placements, id >= 56);
+		let (score, solution) = mutate_solver::solve(&problem, id >= 56, time);
+		let ref_score = scoring::score(&problem, &solution, id >= 56);
 		if score == ref_score {
 			println!("Score matches reference score: {}", score);
 		} else {
@@ -85,7 +85,6 @@ fn main() {
 		if score <= 0.0 {
 			println!("No scoring solution found :-(");
 		} else {
-			let solution = Solution { placements };
 			let ofn = format!("solution-{}-{}.json", id, ref_score);
 			let w = File::create(ofn).unwrap();
 			let _ = serde_json::to_writer_pretty(w, &solution);

@@ -32,6 +32,7 @@ pub struct Problem {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Solution {
     pub placements: Vec<Point<f64>>,
+    pub volumes: Option<Vec<f64>>,
 }
 
 impl Problem {
@@ -52,5 +53,12 @@ impl Solution {
         let reader = BufReader::new(file);
         let s = serde_json::from_reader(reader);
         s
+    }
+
+    pub fn volume(&self, i: usize) -> f64 {
+        match &self.volumes {
+            None => 1.0,
+            Some(x) => x[i]
+        }
     }
 }

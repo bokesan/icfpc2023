@@ -1,10 +1,10 @@
 use crate::geometry::{Point, point};
 use crate::intersect::line_circle_intersect;
-use crate::problem::{Attendee, Problem};
+use crate::problem::{Attendee, Problem, Solution};
 
-pub fn score(problem: &Problem, placements: &Vec<Point<f64>>, playing_together: bool) -> f64 {
-    let closeness = closeness_factors(problem, placements, playing_together);
-    problem.attendees.iter().map(|a| happiness(problem, a, placements, &closeness)).sum()
+pub fn score(problem: &Problem, solution: &Solution, playing_together: bool) -> f64 {
+    let closeness = closeness_factors(problem, &solution.placements, playing_together);
+    problem.attendees.iter().map(|a| happiness(problem, a, solution, &closeness)).sum()
 }
 
 pub fn closeness_factors(problem: &Problem, placements: &Vec<Point<f64>>, playing_together: bool) -> Vec<f64> {
@@ -24,9 +24,9 @@ pub fn closeness_factors(problem: &Problem, placements: &Vec<Point<f64>>, playin
     closeness
 }
 
-fn happiness(problem: &Problem, attendee: &Attendee, placements: &Vec<Point<f64>>, closeness: &Vec<f64>) -> f64 {
-    (0..placements.len())
-        .map(|k| (closeness[k] * impact(problem, attendee, placements, k)).ceil())
+fn happiness(problem: &Problem, attendee: &Attendee, solution: &Solution, closeness: &Vec<f64>) -> f64 {
+    (0..solution.placements.len())
+        .map(|k| (solution.volume(k) * closeness[k] * impact(problem, attendee, &solution.placements, k)).ceil())
         .sum()
 }
 
