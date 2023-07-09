@@ -148,11 +148,9 @@ fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, volumes: 
                problem.musicians.len(), placements.len());
     }
     let closeness = closeness_factors(problem, &placements.iter().map(|e| e.0).collect(), playing_together);
-    let mut sum = 0.0;
-    for ai in 0 .. problem.attendees.len() {
-        sum += happiness(ai, problem, placements, volumes, &closeness);
-    }
-    sum
+    (0..problem.attendees.len()).into_par_iter()
+        .map(|ai| happiness(ai, problem, placements, volumes, &closeness))
+        .sum()
 }
 
 fn mutation_swap(problem: &Problem, placements: &mut Vec<(Point<f64>, Vec<bool>)>) -> bool {
@@ -314,7 +312,7 @@ pub fn optimize(problem: &Problem, playing_together: bool, max_time_seconds: u64
     if sol_score != best_score_so_far {
         panic!("Bug in solver score computation. Solver: {}, reference: {}", best_score_so_far, sol_score);
     }
-    println!("Final score: {}", sol_score);
+    println!("{} mutations tested. Final score: {}", perms, sol_score);
     (sol_score, sol)
 }
 
