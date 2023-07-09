@@ -3,6 +3,11 @@ use crate::intersect::line_circle_intersect;
 use crate::problem::{Attendee, Problem};
 
 pub fn score(problem: &Problem, placements: &Vec<Point<f64>>, playing_together: bool) -> f64 {
+    let closeness = closeness_factors(problem, placements, playing_together);
+    problem.attendees.iter().map(|a| happiness(problem, a, placements, &closeness)).sum()
+}
+
+pub fn closeness_factors(problem: &Problem, placements: &Vec<Point<f64>>, playing_together: bool) -> Vec<f64> {
     let m = placements.len();
     let mut closeness = vec![1.0; m];
     if playing_together {
@@ -16,7 +21,7 @@ pub fn score(problem: &Problem, placements: &Vec<Point<f64>>, playing_together: 
             closeness[i] = 1.0 + sum;
         }
     }
-    problem.attendees.iter().map(|a| happiness(problem, a, placements, &closeness)).sum()
+    closeness
 }
 
 fn happiness(problem: &Problem, attendee: &Attendee, placements: &Vec<Point<f64>>, closeness: &Vec<f64>) -> f64 {

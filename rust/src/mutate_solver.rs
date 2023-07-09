@@ -5,6 +5,7 @@ use crate::geometry::{Point, point, vector};
 use crate::intersect::line_circle_intersect;
 use crate::problem::{Attendee, Problem};
 use crate::scoring;
+use crate::scoring::closeness_factors;
 
 fn make_positions(problem: &Problem) -> Vec<Point<f64>> {
     let n = problem.musicians.len();
@@ -117,29 +118,61 @@ fn impact(att: &Attendee, mus: Point<f64>, instrument: usize) -> f64 {
     (1000000.0 * att.tastes[instrument] / (d*d)).ceil()
 }
 
-fn happiness(attendee_index: usize, problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>) -> f64 {
+fn happiness(attendee_index: usize, problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, closeness: &Vec<f64>) -> f64 {
     let mut sum = 0.0;
     let ms = &problem.musicians;
     let a = &problem.attendees[attendee_index];
     for (k, place) in placements.iter().enumerate() {
         if place.1[attendee_index] {
             let instrument = ms[k];
-            sum = sum + impact(a, place.0, instrument as usize);
+            sum += (closeness[k] * impact(a, place.0, instrument)).ceil();
         }
     }
     sum
 }
 
-fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>) -> f64 {
+fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, playing_together: bool) -> f64 {
     if placements.len() != problem.musicians.len() {
         panic!("Fatal error: wrong placements length. musicians: {}, placements: {}",
                problem.musicians.len(), placements.len());
     }
+    let closeness = closeness_factors(problem, &placements.iter().map(|e| e.0).collect(), playing_together);
     let mut sum = 0.0;
     for ai in 0 .. problem.attendees.len() {
-        sum = sum + happiness(ai, problem, placements);
+        sum += happiness(ai, problem, placements, &closeness);
     }
     sum
+}
+
+fn mutation_swap(placements: &mut Vec<(Point<f64>, Vec<bool>)>) -> bool {
+    let mut rng = rand::thread_rng();
+    let n= placements.len();
+    let i1 = rng.gen_range(0..n);
+    for _k in 0..100 {
+        let i2 = rng.gen_range(0..n);
+        if i1 != i2 {
+            placements.swap(i1, i2);
+            return true;
+        }
+    }
+    false
+}
+
+// move a musician up to 5 units in any direction
+fn mutation_move(problem: &Problem, placements: &mut Vec<(Point<f64>, Vec<bool>)>) -> bool {
+    let mut rng = rand::thread_rng();
+    let n = placements.len();
+    for _i in 0..100 {
+        let i = rng.gen_range(0..n);
+        let x_offs = rng.gen_range(0..11) as f64 - 5.0;
+        let y_offs = rng.gen_range(0..11) as f64 - 5.0;
+        let np = placements[i].0.add(vector(x_offs, y_offs));
+        if on_stage(problem, &np) && distance_to_others_ok(&np, i, &placements) {
+            placements[i] = (np, compute_los(problem, &placements, i));
+            return true
+        }
+    }
+    false
 }
 
 fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>) -> Vec<(Point<f64>, Vec<bool>)> {
@@ -148,30 +181,11 @@ fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>) -> Vec<(Point<f64
     let n = v.len();
     let mut mutated = false;
     if rng.gen_range(0..2) == 0 {
-        // flip two musicians
-        let i1 = rng.gen_range(0..n);
-        while !mutated {
-            let i2 = rng.gen_range(0..n);
-            if i1 != i2 {
-                r[i1] = v[i2].clone();
-                r[i2] = v[i1].clone();
-                mutated = true;
-            }
-        }
+        // swap two musicians
+        mutation_swap(&mut r);
     } else {
         // move musician
-        let mut count = 100;
-        while !mutated  && count > 0 {
-            let i1 = rng.gen_range(0..n);
-            let xoffs = rng.gen_range(0..11) as f64 - 5.0;
-            let yoffs = rng.gen_range(0..11) as f64 - 5.0;
-            let np = r[i1].0.add(vector(xoffs, yoffs));
-            if on_stage(problem, &np) && distance_to_others_ok(&np, i1, &r) {
-                r[i1] = (np, compute_los(problem, &r, i1));
-                mutated = true;
-            }
-            count = count - 1;
-        }
+        mutation_move(problem, &mut r);
     }
     r
 }
@@ -191,18 +205,18 @@ fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &Vec<(Point<f64>, Vec<bo
     true
 }
 
-pub fn solve(problem: &Problem) -> (f64, Vec<Point<f64>>) {
+pub fn solve(problem: &Problem, playing_together: bool) -> (f64, Vec<Point<f64>>) {
     let timeout = Duration::from_secs(100);
     let start = Instant::now();
     let r = make_positions(problem);
     let mut ar = annotate_with_los(problem, &r);
-    let mut s = score(problem, &ar);
+    let mut s = score(problem, &ar, playing_together);
     println!("Initial score: {}", s);
     let mut perms: u64 = 1;
     while start.elapsed() < timeout {
         perms = perms + 1;
         let r2 = mutate(problem, &ar);
-        let s2 = score(problem, &r2);
+        let s2 = score(problem, &r2, playing_together);
         if s2 > s {
             ar = r2;
             s = s2;
