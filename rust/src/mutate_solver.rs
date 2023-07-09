@@ -1,6 +1,8 @@
 use std::ops::Add;
 use std::time::{Duration, Instant};
+
 use rand::Rng;
+
 use crate::geometry::{Point, point, vector};
 use crate::intersect::line_circle_intersect;
 use crate::problem::{Attendee, Problem};
@@ -13,11 +15,10 @@ fn make_positions(problem: &Problem) -> Vec<Point<f64>> {
     let max_rows = (problem.stage_height / 10.0).floor() as i32 - 1;
     let max_cols = (problem.stage_width / 10.0).floor() as i32 - 1;
 
-    // r * c == n
     println!("stage size: {} x {}", problem.stage_width, problem.stage_height);
     let mut c = ((n as f64).sqrt() * problem.stage_width.sqrt() / problem.stage_height.sqrt()) as i32;
     let mut r = ((n as f64).sqrt() * problem.stage_height.sqrt() / problem.stage_width.sqrt()) as i32;
-    println!("calc: {} x {} = {}", c, r, c*r);
+    // println!("calc: {} x {} = {}", c, r, c*r);
     if c == 0 {
         c = 1;
         r = n as i32;
@@ -98,6 +99,12 @@ fn compute_los(problem: &Problem, positions: &Vec<(Point<f64>, Vec<bool>)>, i: u
     visible
 }
 
+fn recompute_los(problem: &Problem, ann: &mut Vec<(Point<f64>, Vec<bool>)>) {
+    for i in 0..ann.len() {
+        ann[i] = (ann[i].0, compute_los(problem, ann, i));
+    }
+}
+
 fn annotate_with_los(problem: &Problem, positions: &Vec<Point<f64>>) -> Vec<(Point<f64>, Vec<bool>)> {
     let mut result = Vec::with_capacity(positions.len());
     let na = problem.attendees.len();
@@ -144,14 +151,16 @@ fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, playing_t
     sum
 }
 
-fn mutation_swap(placements: &mut Vec<(Point<f64>, Vec<bool>)>) -> bool {
+fn mutation_swap(problem: &Problem, placements: &mut Vec<(Point<f64>, Vec<bool>)>) -> bool {
     let mut rng = rand::thread_rng();
     let n= placements.len();
     let i1 = rng.gen_range(0..n);
+    let instrument1 = problem.musicians[i1];
     for _k in 0..100 {
         let i2 = rng.gen_range(0..n);
-        if i1 != i2 {
+        if i1 != i2 && instrument1 != problem.musicians[i2] {
             placements.swap(i1, i2);
+            // println!("  mutation: swapped {} and {}", i1, i2);
             return true;
         }
     }
@@ -160,33 +169,38 @@ fn mutation_swap(placements: &mut Vec<(Point<f64>, Vec<bool>)>) -> bool {
 
 // move a musician up to 5 units in any direction
 fn mutation_move(problem: &Problem, placements: &mut Vec<(Point<f64>, Vec<bool>)>) -> bool {
+    let max_move_dist = (problem.stage_width.max(problem.stage_height) as usize / 2).max(2);
+    let lim = 2 * max_move_dist + 1;
     let mut rng = rand::thread_rng();
     let n = placements.len();
     for _i in 0..100 {
         let i = rng.gen_range(0..n);
-        let x_offs = rng.gen_range(0..11) as f64 - 5.0;
-        let y_offs = rng.gen_range(0..11) as f64 - 5.0;
+        let x_offs = (rng.gen_range(0..lim) - max_move_dist) as f64;
+        let y_offs = (rng.gen_range(0..lim) - max_move_dist) as f64;
         let np = placements[i].0.add(vector(x_offs, y_offs));
         if on_stage(problem, &np) && distance_to_others_ok(&np, i, &placements) {
-            placements[i] = (np, compute_los(problem, &placements, i));
+            placements[i] = (np, Vec::new());
+            recompute_los(problem, placements);
+            // println!("  mutation: moved {} by {},{}", i, x_offs, y_offs);
             return true
         }
     }
     false
 }
 
-fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>) -> Vec<(Point<f64>, Vec<bool>)> {
+fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>, swap_enabled: bool) -> Vec<(Point<f64>, Vec<bool>)> {
     let mut r = v.to_vec();
     let mut rng = rand::thread_rng();
-    let n = v.len();
-    let mut mutated = false;
-    if rng.gen_range(0..2) == 0 {
-        // swap two musicians
-        mutation_swap(&mut r);
-    } else {
-        // move musician
-        mutation_move(problem, &mut r);
+    let mut c = rng.gen_range(0..20);
+
+    if c == 0 || !swap_enabled {
+        // mit moves ist der score total grütze
+        if mutation_move(problem, &mut r) {
+            return r;
+        }
+        c -= 1;
     }
+    mutation_swap(problem, &mut r);
     r
 }
 
@@ -205,19 +219,33 @@ fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &Vec<(Point<f64>, Vec<bo
     true
 }
 
-pub fn solve(problem: &Problem, playing_together: bool) -> (f64, Vec<Point<f64>>) {
-    let timeout = Duration::from_secs(100);
+pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -> (f64, Vec<Point<f64>>) {
+    let verify = false;
+    let timeout = Duration::from_secs(max_time_seconds);
     let start = Instant::now();
     let r = make_positions(problem);
     let mut ar = annotate_with_los(problem, &r);
     let mut s = score(problem, &ar, playing_together);
+    let ref_score = scoring::score(problem, &r, playing_together);
+    if s != ref_score {
+        panic!("Bug in solver score computation. Solver: {}, reference: {}", s, ref_score);
+    }
     println!("Initial score: {}", s);
+    let swap_enabled = problem.musicians.iter().any(|i| *i != 0);
     let mut perms: u64 = 1;
     while start.elapsed() < timeout {
         perms = perms + 1;
-        let r2 = mutate(problem, &ar);
+        let r2 = mutate(problem, &ar, swap_enabled);
         let s2 = score(problem, &r2, playing_together);
+        if verify {
+            let p2 = r2.iter().map(|e| e.0).collect();
+            let ref_s2 = scoring::score(problem, &p2, playing_together);
+            if s2 != ref_s2 {
+                println!("    verify: score wrong. calc={}, ref={}", s2, ref_s2);
+            }
+        }
         if s2 > s {
+            // println!("    good one! Score improved from {} to {}", s, s2);
             ar = r2;
             s = s2;
         }
