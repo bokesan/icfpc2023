@@ -1,7 +1,6 @@
 mod geometry;
 mod problem;
 mod intersect;
-mod fixed_pos_solver;
 mod mutate_solver;
 mod scoring;
 
@@ -70,7 +69,8 @@ fn main() {
 		if score == ref_score {
 			println!("Score matches reference score: {}", score);
 		} else {
-			println!("Scores do not match. Solver: {}, reference: {}", score, ref_score);
+			println!("Scores do not match. Solver: {}, reference: {}, {:.1}% off.",
+					 score, ref_score, percent_off(ref_score, score));
 		}
 		if score <= 0.0 {
 			println!("No scoring solution found :-(");
@@ -81,4 +81,9 @@ fn main() {
 			let _ = serde_json::to_writer_pretty(w, &solution);
 		}
 	}
+}
+
+fn percent_off(correct: f64, wrong: f64) -> f64 {
+	let delta = if wrong > correct { wrong - correct } else { correct - wrong };
+	100.0 * delta / correct
 }
