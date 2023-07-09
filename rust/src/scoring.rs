@@ -44,13 +44,13 @@ pub fn closeness_factors2(problem: &Problem, placements: &Vec<(Point<f64>, Vec<b
     }
 }
 
-fn happiness(problem: &Problem, attendee: &Attendee, solution: &Solution, closeness: &Vec<f64>) -> f64 {
+fn happiness(problem: &Problem, attendee: &Attendee, solution: &Solution, closeness: &[f64]) -> f64 {
     (0..solution.placements.len())
         .map(|k| (solution.volume(k) * closeness[k] * impact(problem, attendee, &solution.placements, k)).ceil())
         .sum()
 }
 
-fn impact(problem: &Problem, attendee: &Attendee, placements: &Vec<Point<f64>>, k: usize) -> f64 {
+fn impact(problem: &Problem, attendee: &Attendee, placements: &[Point<f64>], k: usize) -> f64 {
     if is_blocked(problem, attendee, placements, k) {
         return 0.0
     }
@@ -62,7 +62,7 @@ fn impact(problem: &Problem, attendee: &Attendee, placements: &Vec<Point<f64>>, 
     (1_000_000.0 * attendee.tastes[instrument] / (d*d)).ceil()
 }
 
-pub fn is_blocked(problem: &Problem, attendee: &Attendee, placements: &Vec<Point<f64>>, musician_index: usize) -> bool {
+pub fn is_blocked(problem: &Problem, attendee: &Attendee, placements: &[Point<f64>], musician_index: usize) -> bool {
     let a = point(attendee.x, attendee.y);
     let p = placements[musician_index];
 

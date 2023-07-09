@@ -73,7 +73,7 @@ fn on_stage(problem: &Problem, p: &Point<f64>) -> bool {
         && p.y <= problem.stage_height + bly - 10.0
 }
 
-fn is_blocked2(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, musician_index: usize, attendee: &Attendee) -> bool {
+fn is_blocked2(problem: &Problem, placements: &[(Point<f64>, Vec<bool>)], musician_index: usize, attendee: &Attendee) -> bool {
     let attendee_pos = point(attendee.x, attendee.y);
     let musician_pos = placements[musician_index].0;
     for (i,p) in placements.iter().enumerate() {
@@ -91,7 +91,7 @@ fn is_blocked2(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, mus
     false
 }
 
-fn compute_los(problem: &Problem, positions: &Vec<(Point<f64>, Vec<bool>)>, i: usize) -> Vec<bool> {
+fn compute_los(problem: &Problem, positions: &[(Point<f64>, Vec<bool>)], i: usize) -> Vec<bool> {
     let na = problem.attendees.len();
     let mut visible = Vec::with_capacity(na);
     for a in &problem.attendees {
@@ -129,7 +129,7 @@ fn impact(att: &Attendee, mus: Point<f64>, instrument: usize) -> f64 {
     (1_000_000.0 * att.tastes[instrument] / (d*d)).ceil()
 }
 
-fn happiness(attendee_index: usize, problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, volumes: &Vec<f64>, closeness: &Vec<f64>) -> f64 {
+fn happiness(attendee_index: usize, problem: &Problem, placements: &[(Point<f64>, Vec<bool>)], volumes: &[f64], closeness: &[f64]) -> f64 {
     let mut sum = 0.0;
     let ms = &problem.musicians;
     let a = &problem.attendees[attendee_index];
@@ -142,7 +142,7 @@ fn happiness(attendee_index: usize, problem: &Problem, placements: &Vec<(Point<f
     sum
 }
 
-fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, volumes: &Vec<f64>, playing_together: bool) -> f64 {
+fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, volumes: &[f64], playing_together: bool) -> f64 {
     if placements.len() != problem.musicians.len() {
         panic!("Fatal error: wrong placements length. musicians: {}, placements: {}",
                problem.musicians.len(), placements.len());
@@ -190,7 +190,7 @@ fn mutation_move(problem: &Problem, placements: &mut Vec<(Point<f64>, Vec<bool>)
     false
 }
 
-fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>, volumes: &Vec<f64>, swap_enabled: bool) -> (Vec<(Point<f64>, Vec<bool>)>, Vec<f64>) {
+fn mutate(problem: &Problem, v: &[(Point<f64>, Vec<bool>)], volumes: &[f64], swap_enabled: bool) -> (Vec<(Point<f64>, Vec<bool>)>, Vec<f64>) {
     let mut r = v.to_vec();
     let mut vol = volumes.to_vec();
     let mut rng = rand::thread_rng();
@@ -228,7 +228,7 @@ fn pt_distance_squared(p: &Point<f64>, q: &Point<f64>) -> f64 {
     dx * dx + dy * dy
 }
 
-fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &Vec<(Point<f64>, Vec<bool>)>) -> bool {
+fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &[(Point<f64>, Vec<bool>)]) -> bool {
     for (k,e) in pts.iter().enumerate() {
         if k != i && pt_distance_squared(p, &e.0) < 100.0 {
             return false
