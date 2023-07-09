@@ -37,13 +37,13 @@ fn impact(problem: &Problem, attendee: &Attendee, placements: &Vec<Point<f64>>, 
     (1000000.0 * attendee.tastes[instrument] / (d*d)).ceil()
 }
 
-fn is_blocked(problem: &Problem, attendee: &Attendee, placements: &Vec<Point<f64>>, k: usize) -> bool {
+pub fn is_blocked(problem: &Problem, attendee: &Attendee, placements: &Vec<Point<f64>>, musician_index: usize) -> bool {
     let a = point(attendee.x, attendee.y);
-    let p = placements[k];
+    let p = placements[musician_index];
 
     // check other musicians
     for (k1, p1) in placements.iter().enumerate() {
-        if k1 != k && line_circle_intersect(a, p, *p1, 5.0) {
+        if k1 != musician_index && line_circle_intersect(a, p, *p1, 5.0) {
             return true
         }
     }

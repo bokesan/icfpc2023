@@ -4,6 +4,7 @@ use rand::Rng;
 use crate::geometry::{Point, point, vector};
 use crate::intersect::line_circle_intersect;
 use crate::problem::{Attendee, Problem};
+use crate::scoring;
 
 fn make_positions(problem: &Problem) -> Vec<Point<f64>> {
     let n = problem.musicians.len();
@@ -69,25 +70,6 @@ fn on_stage(problem: &Problem, p: &Point<f64>) -> bool {
         && p.y <= problem.stage_height + bly - 10.0
 }
 
-fn is_blocked(problem: &Problem, placements: &Vec<Point<f64>>, musician_index: usize, attendee: &Attendee) -> bool {
-    let attendee_pos = point(attendee.x, attendee.y);
-    let musician_pos = placements[musician_index];
-    for (i,p) in placements.iter().enumerate() {
-        if i != musician_index && line_circle_intersect(attendee_pos, musician_pos, *p, 5.0) {
-            return true
-        }
-    }
-
-    // check pillars
-    for pil in &problem.pillars {
-        let c = point(pil.center[0], pil.center[1]);
-        if line_circle_intersect(attendee_pos, musician_pos, c, pil.radius) {
-            return true
-        }
-    }
-    false
-}
-
 fn is_blocked2(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, musician_index: usize, attendee: &Attendee) -> bool {
     let attendee_pos = point(attendee.x, attendee.y);
     let musician_pos = placements[musician_index].0;
@@ -121,14 +103,14 @@ fn annotate_with_los(problem: &Problem, positions: &Vec<Point<f64>>) -> Vec<(Poi
     for (i, p) in positions.iter().enumerate() {
         let mut visible = Vec::with_capacity(na);
         for a in &problem.attendees {
-            visible.push(!is_blocked(problem, positions, i, a));
+            visible.push(!scoring::is_blocked(problem, a, positions, i));
         }
         result.push((*p, visible));
     }
     result
 }
 
-fn happiness1(att: &Attendee, mus: Point<f64>, instrument: usize) -> f64 {
+fn impact(att: &Attendee, mus: Point<f64>, instrument: usize) -> f64 {
     let dx = att.x - mus.x;
     let dy = att.y - mus.y;
     let d = (dx * dx + dy * dy).sqrt();
@@ -142,7 +124,7 @@ fn happiness(attendee_index: usize, problem: &Problem, placements: &Vec<(Point<f
     for (k, place) in placements.iter().enumerate() {
         if place.1[attendee_index] {
             let instrument = ms[k];
-            sum = sum + happiness1(a, place.0, instrument as usize);
+            sum = sum + impact(a, place.0, instrument as usize);
         }
     }
     sum
