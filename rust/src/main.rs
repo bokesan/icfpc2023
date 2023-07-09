@@ -10,23 +10,26 @@ use regex::Regex;
 use crate::problem::{Problem, Solution};
 
 fn usage() {
-	println!("Usage: icfpc [-v] problem-file...");
+	println!("Usage: icfpc [-v] [-t seconds] problem-file...");
 	println!("   or: icfpc -score problem-file solution-file");
 	std::process::exit(1);
 }
 
-fn load_problem(f: &String) -> (u32, Problem) {
+fn load_problem(f: &String, verbose: bool) -> (u32, Problem) {
 	let pre = Regex::new(r"problem-([1-9][0-9]*)\.json$").unwrap();
 	let id: u32 = match pre.captures(&*f) {
 		None => panic!("unable to get solution id"),
 		Some(caps) => caps.get(1).unwrap().as_str().parse::<u32>().unwrap()
 	};
+	if verbose {
+		println!("Processing problem {} ({}) ...", id, f);
+	}
 	let problem = Problem::from_file(&f).unwrap();
 	(id, problem)
 }
 
 fn compute_score(pf: &String, sf: &String) {
-	let (id, problem) = load_problem(pf);
+	let (id, problem) = load_problem(pf, false);
 	let solution = Solution::from_file(sf).unwrap();
 	let score = scoring::score(&problem, &solution.placements, id >= 56);
 	println!("Problem: {}, score: {}", id, score);
@@ -36,6 +39,8 @@ fn main() {
     let argv: Vec<String> = wild::args().collect();
 
 	let mut verbose: bool = false;
+	// Solver timeout in seconds
+	let mut time: u64 = 60;
 	let mut files: Vec<String> = Vec::new();
 
 	if argv.len() >= 2 && &argv[1] == "-score" {
@@ -46,11 +51,14 @@ fn main() {
 		return;
 	}
 
-	for f in &argv[1..argv.len()] {
+	for i in 1..argv.len() {
+		let f = &argv[i];
 		if f == "-v" {
 			verbose = true;
+		} else if f == "-t" {
+			time = f.parse::<u64>().unwrap();
 		} else {
-            files.push(f.to_string());
+			files.push(f.to_string());
 		}
 	}
 
@@ -58,14 +66,12 @@ fn main() {
 		usage();
 	}
 
+	println!("Time per problem: {} seconds.", time);
 	for f in files {
-		let (id, problem) = load_problem(&f);
-		if verbose {
-			println!("Processing problem {} ({}) ...", id, f);
-		}
+		let (id, problem) = load_problem(&f, verbose);
 		println!("Problem {} loaded. Musicians: {}, attendees: {}", id, problem.musicians.len(), problem.attendees.len());
 		println!("Number of instruments: {}", problem.musicians.iter().max().unwrap());
-		let (score, placements) = mutate_solver::solve(&problem, id >= 56, 100);
+		let (score, placements) = mutate_solver::solve(&problem, id >= 56, time);
 		let ref_score = scoring::score(&problem, &placements, id >= 56);
 		if score == ref_score {
 			println!("Score matches reference score: {}", score);
