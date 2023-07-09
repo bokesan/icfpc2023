@@ -223,6 +223,80 @@ fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &Vec<(Point<f64>, Vec<bo
     true
 }
 
+fn acceptance_probability(old_score: f64, new_score: f64, temperature: f64) -> f64 {
+    if new_score > old_score {
+        1.0
+    } else {
+        let diff = old_score - new_score;
+        let arg = - diff.max(1.0) / (temperature * 1000000.0);
+        let r = arg.exp();
+        // println!("acceptance_probability: old_score: {}, new_score: {}, temperature: {:.3}, diff: {}, arg: {:.3}, r: {:.3}",
+        //          old_score, new_score, temperature, diff, arg, r);
+        r
+    }
+}
+
+fn temperature(r: f64) -> f64 {
+    (1.0 - r).min(1.0).max(0.0001)
+}
+
+/// Optimize score using simulated annealing
+pub fn optimize(problem: &Problem, playing_together: bool, max_time_seconds: u64) -> (f64, Solution) {
+    let timeout = Duration::from_secs(max_time_seconds);
+    let start = Instant::now();
+    let r = make_positions(problem);
+    let mut ar = annotate_with_los(problem, &r);
+    let mut s = score(problem, &ar, playing_together);
+    let mut best_so_far = ar.clone();
+    let mut best_score_so_far = s;
+    let ref_score = scoring::score(problem, &Solution { placements: r, volumes: None }, playing_together);
+    if s != ref_score {
+        panic!("Bug in solver score computation. Solver: {}, reference: {}", s, ref_score);
+    }
+    println!("Initial score: {}", s);
+    let swap_enabled = problem.musicians.iter().any(|i| *i != 0);
+    let mut perms: u64 = 1;
+    loop {
+        let ela = start.elapsed();
+        if ela > timeout {
+            break;
+        }
+        perms = perms + 1;
+        let new_ar = mutate(problem, &ar, swap_enabled);
+        let new_s = score(problem, &new_ar, playing_together);
+        if new_s > s {
+            ar = new_ar;
+            s = new_s;
+            if s > best_score_so_far {
+                best_so_far.clone_from(&ar);
+                best_score_so_far = s;
+                // println!("New best score: {}", s);
+                // } else {
+                // println!("New score: {}", s);
+            }
+        } else {
+            let t = temperature(ela.as_secs_f64() / max_time_seconds as f64);
+            let metropolis = acceptance_probability(s, new_s, t);
+            // println!("i={}, t={:.3}, p_accept: {:.3}", perms, t, metropolis);
+            let r: f64 = rand::thread_rng().gen();
+            if r < metropolis {
+                ar = new_ar;
+                s = new_s;
+                // println!("New score: {} (accepted)", s);
+            }
+        }
+    }
+    let volumes = vec![10.0; problem.musicians.len()];
+    let sol = Solution { placements: best_so_far.iter().map(|e| e.0).collect(), volumes: Some(volumes) };
+    let sol_score = scoring::score(problem, &sol, playing_together);
+    if sol_score != 10.0 * best_score_so_far {
+        panic!("Bug in solver score computation. Solver: {}, reference: {}", best_score_so_far, sol_score);
+    }
+    println!("Final score: {}", sol_score);
+    (sol_score, sol)
+}
+
+
 pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -> (f64, Solution) {
     let verify = false;
     let timeout = Duration::from_secs(max_time_seconds);

@@ -74,7 +74,7 @@ fn main() {
 		let (id, problem) = load_problem(&f, verbose);
 		println!("Problem {} loaded. Musicians: {}, attendees: {}", id, problem.musicians.len(), problem.attendees.len());
 		println!("Number of instruments: {}", problem.musicians.iter().max().unwrap());
-		let (score, solution) = mutate_solver::solve(&problem, id >= 56, time);
+		let (score, solution) = mutate_solver::optimize(&problem, id >= 56, time);
 		let ref_score = scoring::score(&problem, &solution, id >= 56);
 		if score == ref_score {
 			println!("Score matches reference score: {}", score);
