@@ -71,6 +71,7 @@ impl<N: ops::Sub<Output = N>> ops::Sub for Vector<N> {
     }
 }
 
+#[allow(dead_code)]
 impl<T: ops::Mul<Output = T> + Copy> Vector<T> {
 
     /// Scale vector by constant
