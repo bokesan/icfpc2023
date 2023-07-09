@@ -41,8 +41,8 @@ impl Problem {
         let file = File::open(f).unwrap();
         let reader = BufReader::new(file);
         let s: String = serde_json::from_reader(reader)?;
-        let p= serde_json::from_str(&*s);
-        p
+        
+        serde_json::from_str(&s)
     }
     
     pub fn num_instruments(&self) -> usize {
@@ -55,8 +55,8 @@ impl Solution {
     pub fn from_file(f: &String) -> Result<Solution> {
         let file = File::open(f).unwrap();
         let reader = BufReader::new(file);
-        let s = serde_json::from_reader(reader);
-        s
+        
+        serde_json::from_reader(reader)
     }
 
     pub fn volume(&self, i: usize) -> f64 {

@@ -147,7 +147,7 @@ fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, volumes: 
         panic!("Fatal error: wrong placements length. musicians: {}, placements: {}",
                problem.musicians.len(), placements.len());
     }
-    let closeness = closeness_factors2(problem, &placements, playing_together);
+    let closeness = closeness_factors2(problem, placements, playing_together);
     (0..problem.attendees.len()).into_par_iter()
         .map(|ai| happiness(ai, problem, placements, volumes, &closeness))
         .sum()
@@ -171,7 +171,7 @@ fn mutation_swap(problem: &Problem, placements: &mut Vec<(Point<f64>, Vec<bool>)
 
 // move a musician up to 5 units in any direction
 fn mutation_move(problem: &Problem, placements: &mut Vec<(Point<f64>, Vec<bool>)>) -> bool {
-    let max_move_dist = (problem.stage_width.max(problem.stage_height) as usize / 2).max(2);
+    let max_move_dist = (problem.stage_width.max(problem.stage_height) as i32 / 2).max(2);
     let lim = 2 * max_move_dist + 1;
     let mut rng = rand::thread_rng();
     let n = placements.len();
@@ -180,7 +180,7 @@ fn mutation_move(problem: &Problem, placements: &mut Vec<(Point<f64>, Vec<bool>)
         let x_offs = (rng.gen_range(0..lim) - max_move_dist) as f64;
         let y_offs = (rng.gen_range(0..lim) - max_move_dist) as f64;
         let np = placements[i].0.add(vector(x_offs, y_offs));
-        if on_stage(problem, &np) && distance_to_others_ok(&np, i, &placements) {
+        if on_stage(problem, &np) && distance_to_others_ok(&np, i, placements) {
             placements[i] = (np, Vec::new());
             recompute_los(problem, placements);
             // println!("  mutation: moved {} by {},{}", i, x_offs, y_offs);
@@ -215,10 +215,8 @@ fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>, volumes: &Vec<f64
         }
     }
 
-    if c < 3 {
-        if mutation_move(problem, &mut r) {
-            return (r, vol);
-        }
+    if c < 3 && mutation_move(problem, &mut r) {
+        return (r, vol);
     }
     mutation_swap(problem, &mut r);
     (r, vol)
@@ -232,7 +230,7 @@ fn pt_distance_squared(p: &Point<f64>, q: &Point<f64>) -> f64 {
 
 fn distance_to_others_ok(p: &Point<f64>, i: usize, pts: &Vec<(Point<f64>, Vec<bool>)>) -> bool {
     for (k,e) in pts.iter().enumerate() {
-        if k != i && pt_distance_squared(&p, &e.0) < 100.0 {
+        if k != i && pt_distance_squared(p, &e.0) < 100.0 {
             return false
         }
     }
@@ -245,10 +243,10 @@ fn acceptance_probability(old_score: f64, new_score: f64, temperature: f64) -> f
     } else {
         let diff = old_score - new_score;
         let arg = - diff.max(1.0) / (temperature * 1000000.0); // FIXME: magic constant
-        let r = arg.exp();
+        
         // println!("acceptance_probability: old_score: {}, new_score: {}, temperature: {:.3}, diff: {}, arg: {:.3}, r: {:.3}",
         //          old_score, new_score, temperature, diff, arg, r);
-        r
+        arg.exp()
     }
 }
 

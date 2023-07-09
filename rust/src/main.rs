@@ -17,14 +17,14 @@ fn usage() {
 
 fn load_problem(f: &String, verbose: bool) -> (u32, Problem) {
 	let pre = Regex::new(r"problem-([1-9][0-9]*)\.json$").unwrap();
-	let id: u32 = match pre.captures(&*f) {
+	let id: u32 = match pre.captures(f) {
 		None => panic!("unable to get solution id"),
 		Some(caps) => caps.get(1).unwrap().as_str().parse::<u32>().unwrap()
 	};
 	if verbose {
 		println!("Processing problem {} ({}) ...", id, f);
 	}
-	let problem = Problem::from_file(&f).unwrap();
+	let problem = Problem::from_file(f).unwrap();
 	(id, problem)
 }
 
@@ -65,7 +65,7 @@ fn main() {
 		i += 1;
 	}
 
-	if files.len() == 0 {
+	if files.is_empty() {
 		usage();
 	}
 

@@ -21,6 +21,6 @@ pub fn line_circle_intersect(e: Point<f64>, l: Point<f64>, c: Point<f64>, r: f64
         disc = disc.sqrt();
         let t1 = (-b - disc) / (2.0 * a);
         let t2 = (-b + disc) / (2.0 * a);
-        (t1 >= 0.0 && t1 <= 1.0) || (t2 >= 0.0 && t2 <= 1.0)
+        (0.0..=1.0).contains(&t1) || (0.0..=1.0).contains(&t2)
     }
 }
