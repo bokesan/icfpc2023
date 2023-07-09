@@ -51,15 +51,18 @@ fn main() {
 		return;
 	}
 
-	for i in 1..argv.len() {
+	let mut i = 1;
+	while i < argv.len() {
 		let f = &argv[i];
 		if f == "-v" {
 			verbose = true;
 		} else if f == "-t" {
-			time = f.parse::<u64>().unwrap();
+			i += 1;
+			time = argv[i].parse::<u64>().unwrap();
 		} else {
 			files.push(f.to_string());
 		}
+		i += 1;
 	}
 
 	if files.len() == 0 {
