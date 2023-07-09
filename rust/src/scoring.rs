@@ -1,10 +1,12 @@
+use rayon::iter::{ParallelIterator,IntoParallelRefIterator};
+
 use crate::geometry::{Point, point};
 use crate::intersect::line_circle_intersect;
 use crate::problem::{Attendee, Problem, Solution};
 
 pub fn score(problem: &Problem, solution: &Solution, playing_together: bool) -> f64 {
     let closeness = closeness_factors(problem, &solution.placements, playing_together);
-    problem.attendees.iter().map(|a| happiness(problem, a, solution, &closeness)).sum()
+    problem.attendees.par_iter().map(|a| happiness(problem, a, solution, &closeness)).sum()
 }
 
 pub fn closeness_factors(problem: &Problem, placements: &Vec<Point<f64>>, playing_together: bool) -> Vec<f64> {

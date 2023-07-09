@@ -11,6 +11,7 @@ rand = "0.8.4"
 regex = "1.9.0"
 serde = { version = "1.0.167", features = ["serde_derive"] }
 serde_json = "1.0.100"
+rayon = "1.7.0"
 wild = "2.1.0"
 
 [profile.release]

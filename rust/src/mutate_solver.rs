@@ -2,6 +2,7 @@ use std::ops::Add;
 use std::time::{Duration, Instant};
 
 use rand::Rng;
+use rayon::iter::{ParallelIterator, IntoParallelIterator, IntoParallelRefMutIterator};
 
 use crate::geometry::{Point, point, vector};
 use crate::intersect::line_circle_intersect;
@@ -100,8 +101,11 @@ fn compute_los(problem: &Problem, positions: &Vec<(Point<f64>, Vec<bool>)>, i: u
 }
 
 fn recompute_los(problem: &Problem, ann: &mut Vec<(Point<f64>, Vec<bool>)>) {
+    let vizz: Vec<Vec<bool>> = (0..ann.len()).into_par_iter().map(|i| {
+        compute_los(problem, ann, i)
+    }).collect();
     for i in 0..ann.len() {
-        ann[i] = (ann[i].0, compute_los(problem, ann, i));
+        ann[i] = (ann[i].0, vizz[i].clone());
     }
 }
 
