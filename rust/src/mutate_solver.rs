@@ -8,7 +8,7 @@ use crate::geometry::{Point, point, vector};
 use crate::intersect::line_circle_intersect;
 use crate::problem::{Attendee, Problem, Solution};
 use crate::scoring;
-use crate::scoring::closeness_factors;
+use crate::scoring::closeness_factors2;
 
 fn make_positions(problem: &Problem) -> Vec<Point<f64>> {
     let n = problem.musicians.len();
@@ -147,7 +147,7 @@ fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, volumes: 
         panic!("Fatal error: wrong placements length. musicians: {}, placements: {}",
                problem.musicians.len(), placements.len());
     }
-    let closeness = closeness_factors(problem, &placements.iter().map(|e| e.0).collect(), playing_together);
+    let closeness = closeness_factors2(problem, &placements, playing_together);
     (0..problem.attendees.len()).into_par_iter()
         .map(|ai| happiness(ai, problem, placements, volumes, &closeness))
         .sum()
@@ -244,7 +244,7 @@ fn acceptance_probability(old_score: f64, new_score: f64, temperature: f64) -> f
         1.0
     } else {
         let diff = old_score - new_score;
-        let arg = - diff.max(1.0) / (temperature * 1000000.0);
+        let arg = - diff.max(1.0) / (temperature * 1000000.0); // FIXME: magic constant
         let r = arg.exp();
         // println!("acceptance_probability: old_score: {}, new_score: {}, temperature: {:.3}, diff: {}, arg: {:.3}, r: {:.3}",
         //          old_score, new_score, temperature, diff, arg, r);

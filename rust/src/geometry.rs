@@ -50,6 +50,16 @@ pub fn vector<N>(x: N, y: N) -> Vector<N> {
     Vector { x, y }
 }
 
+impl Point<f64> {
+
+    pub fn distance(&self, p: &Point<f64>) -> f64 {
+        let dx = self.x - p.x;
+        let dy = self.y - p.y;
+        (dx*dx + dy*dy).sqrt()
+    }
+
+}
+
 impl<N: ops::Sub<Output = N>> ops::Sub for Point<N> {
     type Output = Vector<N>;
     fn sub(self, rhs: Point<N>) -> Vector<N> {

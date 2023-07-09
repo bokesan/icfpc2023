@@ -1,4 +1,4 @@
-use rayon::iter::{ParallelIterator,IntoParallelRefIterator};
+use rayon::iter::{ParallelIterator,IntoParallelIterator,IntoParallelRefIterator};
 
 use crate::geometry::{Point, point};
 use crate::intersect::line_circle_intersect;
@@ -9,7 +9,7 @@ pub fn score(problem: &Problem, solution: &Solution, playing_together: bool) -> 
     problem.attendees.par_iter().map(|a| happiness(problem, a, solution, &closeness)).sum()
 }
 
-pub fn closeness_factors(problem: &Problem, placements: &Vec<Point<f64>>, playing_together: bool) -> Vec<f64> {
+fn closeness_factors(problem: &Problem, placements: &Vec<Point<f64>>, playing_together: bool) -> Vec<f64> {
     let m = placements.len();
     let mut closeness = vec![1.0; m];
     if playing_together {
@@ -17,13 +17,31 @@ pub fn closeness_factors(problem: &Problem, placements: &Vec<Point<f64>>, playin
             let mut sum = 0.0;
             for (j,q) in placements.iter().enumerate() {
                 if i != j && problem.musicians[i] == problem.musicians[j] {
-                    sum += 1.0 / (*p - *q).length();
+                    sum += 1.0 / p.distance(q);
                 }
             }
             closeness[i] = 1.0 + sum;
         }
     }
     closeness
+}
+
+pub fn closeness_factors2(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, playing_together: bool) -> Vec<f64> {
+    let m = placements.len();
+    if playing_together {
+        (0..placements.len()).into_par_iter().map(|i| {
+            let p = placements[i].0;
+            let mut sum = 0.0;
+            for (j,(q,_)) in placements.iter().enumerate() {
+                if i != j && problem.musicians[i] == problem.musicians[j] {
+                    sum += 1.0 / p.distance(q);
+                }
+            }
+            1.0 + sum
+        }).collect()
+    } else {
+        vec![1.0; m]
+    }
 }
 
 fn happiness(problem: &Problem, attendee: &Attendee, solution: &Solution, closeness: &Vec<f64>) -> f64 {
