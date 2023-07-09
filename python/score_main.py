@@ -12,16 +12,18 @@ def playing_together(problem):
     return problem['id'] >= 56
 
 def get_closeness_factors(problem, placements):
-    m = len(problem['musicians'])
+    ms = problem['musicians']
+    m = len(ms)
     if not playing_together(problem):
         return [1] * m
     else:
         cls = []
         for i in range(m):
             p = placements[i]
+            instrument = ms[i]
             sum = 0
             for j in range(m):
-                if j != i:
+                if j != i and ms[j] == instrument:
                     sum += 1 / distance(p, placements[j])
             cls.append(sum + 1)
         return cls
@@ -53,7 +55,7 @@ def is_blocked(problem, placements, musician_index, attendee):
 
 def impact(a, m, instrument):
     d = distance(a,m)
-    return 1000000.0 * a['tastes'][instrument] / (d*d)
+    return math.ceil(1000000.0 * a['tastes'][instrument] / (d*d))
 
 def happiness(a, problem, placements, closeness):
     sum = 0
