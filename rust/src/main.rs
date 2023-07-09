@@ -72,8 +72,9 @@ fn main() {
 	println!("Time per problem: {} seconds.", time);
 	for f in files {
 		let (id, problem) = load_problem(&f, verbose);
-		println!("Problem {} loaded. Musicians: {}, attendees: {}", id, problem.musicians.len(), problem.attendees.len());
-		println!("Number of instruments: {}", problem.musicians.iter().max().unwrap());
+		println!("Problem {} loaded. Musicians: {}, instruments: {}, attendees: {}",
+				 id, problem.musicians.len(), problem.num_instruments(), problem.attendees.len());
+		println!("Sums of tastes: {:?}", sum_tastes(&problem));
 		let (score, solution) = mutate_solver::optimize(&problem, id >= 56, time);
 		let ref_score = scoring::score(&problem, &solution, id >= 56);
 		if score == ref_score {
@@ -84,6 +85,7 @@ fn main() {
 		}
 		if score <= 0.0 {
 			println!("No scoring solution found :-(");
+			println!("But here are the final volumes: {:?}", solution.volumes);
 		} else {
 			let ofn = format!("solution-{}-{}.json", id, ref_score);
 			let w = File::create(ofn).unwrap();
@@ -95,4 +97,14 @@ fn main() {
 fn percent_off(correct: f64, wrong: f64) -> f64 {
 	let delta = if wrong > correct { wrong - correct } else { correct - wrong };
 	100.0 * delta / correct
+}
+
+fn sum_tastes(problem: &Problem) -> Vec<f64> {
+	let mut sums = vec![0.0; problem.num_instruments()];
+	for a in &problem.attendees {
+		for (i,taste) in a.tastes.iter().enumerate() {
+			sums[i] += taste;
+		}
+	}
+	sums
 }

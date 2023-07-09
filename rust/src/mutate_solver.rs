@@ -2,7 +2,7 @@ use std::ops::Add;
 use std::time::{Duration, Instant};
 
 use rand::Rng;
-use rayon::iter::{ParallelIterator, IntoParallelIterator, IntoParallelRefMutIterator};
+use rayon::iter::{ParallelIterator, IntoParallelIterator};
 
 use crate::geometry::{Point, point, vector};
 use crate::intersect::line_circle_intersect;
@@ -129,20 +129,20 @@ fn impact(att: &Attendee, mus: Point<f64>, instrument: usize) -> f64 {
     (1000000.0 * att.tastes[instrument] / (d*d)).ceil()
 }
 
-fn happiness(attendee_index: usize, problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, closeness: &Vec<f64>) -> f64 {
+fn happiness(attendee_index: usize, problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, volumes: &Vec<f64>, closeness: &Vec<f64>) -> f64 {
     let mut sum = 0.0;
     let ms = &problem.musicians;
     let a = &problem.attendees[attendee_index];
     for (k, place) in placements.iter().enumerate() {
         if place.1[attendee_index] {
             let instrument = ms[k];
-            sum += (closeness[k] * impact(a, place.0, instrument)).ceil();
+            sum += (volumes[k] * closeness[k] * impact(a, place.0, instrument)).ceil();
         }
     }
     sum
 }
 
-fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, playing_together: bool) -> f64 {
+fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, volumes: &Vec<f64>, playing_together: bool) -> f64 {
     if placements.len() != problem.musicians.len() {
         panic!("Fatal error: wrong placements length. musicians: {}, placements: {}",
                problem.musicians.len(), placements.len());
@@ -150,7 +150,7 @@ fn score(problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, playing_t
     let closeness = closeness_factors(problem, &placements.iter().map(|e| e.0).collect(), playing_together);
     let mut sum = 0.0;
     for ai in 0 .. problem.attendees.len() {
-        sum += happiness(ai, problem, placements, &closeness);
+        sum += happiness(ai, problem, placements, volumes, &closeness);
     }
     sum
 }
@@ -192,20 +192,38 @@ fn mutation_move(problem: &Problem, placements: &mut Vec<(Point<f64>, Vec<bool>)
     false
 }
 
-fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>, swap_enabled: bool) -> Vec<(Point<f64>, Vec<bool>)> {
+fn mutate(problem: &Problem, v: &Vec<(Point<f64>, Vec<bool>)>, volumes: &Vec<f64>, swap_enabled: bool) -> (Vec<(Point<f64>, Vec<bool>)>, Vec<f64>) {
     let mut r = v.to_vec();
+    let mut vol = volumes.to_vec();
     let mut rng = rand::thread_rng();
-    let mut c = rng.gen_range(0..20);
 
-    if c == 0 || !swap_enabled {
-        // mit moves ist der score total grütze
-        if mutation_move(problem, &mut r) {
-            return r;
+    // Weights:
+    //  swap   = 40
+    //  move   =  2
+    //  volume =  1
+
+    let total = if swap_enabled { 43 } else { 3 };
+    let c = rng.gen_range(0..total);
+
+    if c == 0 {
+        let mus = rng.gen_range(0..problem.musicians.len());
+        let old_vol = vol[mus];
+        loop {
+            let new_vol = rng.gen_range(0..=10) as f64;
+            if new_vol != old_vol {
+                vol[mus] = new_vol;
+                return (r, vol);
+            }
         }
-        c -= 1;
+    }
+
+    if c < 3 {
+        if mutation_move(problem, &mut r) {
+            return (r, vol);
+        }
     }
     mutation_swap(problem, &mut r);
-    r
+    (r, vol)
 }
 
 fn pt_distance_squared(p: &Point<f64>, q: &Point<f64>) -> f64 {
@@ -245,11 +263,13 @@ pub fn optimize(problem: &Problem, playing_together: bool, max_time_seconds: u64
     let timeout = Duration::from_secs(max_time_seconds);
     let start = Instant::now();
     let r = make_positions(problem);
+    let mut volumes = vec![10.0; problem.musicians.len()];
     let mut ar = annotate_with_los(problem, &r);
-    let mut s = score(problem, &ar, playing_together);
-    let mut best_so_far = ar.clone();
+    let mut s = score(problem, &ar, &volumes, playing_together);
+    let mut best_so_far = ar.to_vec();
+    let mut best_volumes_so_far = volumes.to_vec();
     let mut best_score_so_far = s;
-    let ref_score = scoring::score(problem, &Solution { placements: r, volumes: None }, playing_together);
+    let ref_score = scoring::score(problem, &Solution { placements: r, volumes: Some(volumes.to_vec()) }, playing_together);
     if s != ref_score {
         panic!("Bug in solver score computation. Solver: {}, reference: {}", s, ref_score);
     }
@@ -262,13 +282,15 @@ pub fn optimize(problem: &Problem, playing_together: bool, max_time_seconds: u64
             break;
         }
         perms = perms + 1;
-        let new_ar = mutate(problem, &ar, swap_enabled);
-        let new_s = score(problem, &new_ar, playing_together);
+        let (new_ar, new_volumes) = mutate(problem, &ar, &volumes, swap_enabled);
+        let new_s = score(problem, &new_ar, &new_volumes, playing_together);
         if new_s > s {
             ar = new_ar;
+            volumes = new_volumes;
             s = new_s;
             if s > best_score_so_far {
                 best_so_far.clone_from(&ar);
+                best_volumes_so_far.clone_from(&volumes);
                 best_score_so_far = s;
                 // println!("New best score: {}", s);
                 // } else {
@@ -281,15 +303,15 @@ pub fn optimize(problem: &Problem, playing_together: bool, max_time_seconds: u64
             let r: f64 = rand::thread_rng().gen();
             if r < metropolis {
                 ar = new_ar;
+                volumes = new_volumes;
                 s = new_s;
                 // println!("New score: {} (accepted)", s);
             }
         }
     }
-    let volumes = vec![10.0; problem.musicians.len()];
-    let sol = Solution { placements: best_so_far.iter().map(|e| e.0).collect(), volumes: Some(volumes) };
+    let sol = Solution { placements: best_so_far.iter().map(|e| e.0).collect(), volumes: Some(best_volumes_so_far) };
     let sol_score = scoring::score(problem, &sol, playing_together);
-    if sol_score != 10.0 * best_score_so_far {
+    if sol_score != best_score_so_far {
         panic!("Bug in solver score computation. Solver: {}, reference: {}", best_score_so_far, sol_score);
     }
     println!("Final score: {}", sol_score);
@@ -298,13 +320,13 @@ pub fn optimize(problem: &Problem, playing_together: bool, max_time_seconds: u64
 
 
 pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -> (f64, Solution) {
-    let verify = false;
     let timeout = Duration::from_secs(max_time_seconds);
     let start = Instant::now();
     let r = make_positions(problem);
+    let mut volumes = vec![10.0; problem.musicians.len()];
     let mut ar = annotate_with_los(problem, &r);
-    let mut s = score(problem, &ar, playing_together);
-    let ref_score = scoring::score(problem, &Solution { placements: r, volumes: None }, playing_together);
+    let mut s = score(problem, &ar, &volumes, playing_together);
+    let ref_score = scoring::score(problem, &Solution { placements: r, volumes: Some(volumes.to_vec()) }, playing_together);
     if s != ref_score {
         panic!("Bug in solver score computation. Solver: {}, reference: {}", s, ref_score);
     }
@@ -313,22 +335,15 @@ pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -
     let mut perms: u64 = 1;
     while start.elapsed() < timeout {
         perms = perms + 1;
-        let r2 = mutate(problem, &ar, swap_enabled);
-        let s2 = score(problem, &r2, playing_together);
-        if verify {
-            let p2 = r2.iter().map(|e| e.0).collect();
-            let ref_s2 = scoring::score(problem, &Solution{placements: p2, volumes: None}, playing_together);
-            if s2 != ref_s2 {
-                println!("    verify: score wrong. calc={}, ref={}", s2, ref_s2);
-            }
-        }
+        let (r2, nv) = mutate(problem, &ar, &volumes, swap_enabled);
+        let s2 = score(problem, &r2, &nv, playing_together);
         if s2 > s {
             // println!("    good one! Score improved from {} to {}", s, s2);
             ar = r2;
+            volumes = nv;
             s = s2;
         }
     }
     println!("{} mutations tested. Final score: {}", perms, s);
-    let volumes = vec![10.0; problem.musicians.len()];
-    (10.0 * s, Solution { placements: ar.iter().map(|x| x.0).collect(), volumes: Some(volumes) })
+    (s, Solution { placements: ar.iter().map(|x| x.0).collect(), volumes: Some(volumes.to_vec()) })
 }

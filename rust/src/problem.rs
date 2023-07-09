@@ -44,6 +44,10 @@ impl Problem {
         let p= serde_json::from_str(&*s);
         p
     }
+    
+    pub fn num_instruments(&self) -> usize {
+        self.attendees[0].tastes.len()
+    }
 
 }
 
