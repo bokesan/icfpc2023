@@ -1,9 +1,30 @@
+#!/usr/bin/env python3
+
 import sys
 import re
 import json
 import math
 
-from geometry import line_circle_intersect
+from geometry import line_circle_intersect, distance
+
+# Extension 2 enabled?
+def playing_together(problem):
+    return problem['id'] >= 56
+
+def get_closeness_factors(problem, placements):
+    m = len(problem['musicians'])
+    if not playing_together(problem):
+        return [1] * m
+    else:
+        cls = []
+        for i in range(m):
+            p = placements[i]
+            sum = 0
+            for j in range(m):
+                if j != i:
+                    sum += 1 / distance(p, placements[j])
+            cls.append(sum + 1)
+        return cls
 
 def load_problem(path):
     with open(path, 'r') as f:
@@ -30,29 +51,31 @@ def is_blocked(problem, placements, musician_index, attendee):
     return False
             
 
-def happiness1(a,m,instrument):
-    dx = a['x'] - m['x']
-    dy = a['y'] - m['y']
-    d = math.sqrt(dx*dx + dy*dy)
-    return math.ceil(1000000.0 * a['tastes'][instrument] / (d*d))
+def impact(a, m, instrument):
+    d = distance(a,m)
+    return 1000000.0 * a['tastes'][instrument] / (d*d)
 
-def happiness(a,problem,placements):
+def happiness(a, problem, placements, closeness):
     sum = 0
     ms = problem['musicians']
     for k in range(len(ms)):
         if not is_blocked(problem, placements, k, a):
             place = placements[k]
             instrument = ms[k]
-            sum = sum + happiness1(a, place, instrument)
+            sum += math.ceil(closeness[k] * impact(a, place, instrument))
     return sum
 
 def calc_score(problem, placements):
+    m = len(problem['musicians'])
+    print(f"Problem {problem['id']}: musicians={m}, attendees={len(problem['attendees'])}, pillars={len(problem['pillars'])}")
     if len(placements) != len(problem['musicians']):
         print("Placements length does not match number of musicians")
         return 0
+    closeness = get_closeness_factors(problem, placements)
+    print(f"Closeness: {closeness}")
     sum = 0
     for a in problem['attendees']:
-        sum = sum + happiness(a, problem, placements)
+        sum += happiness(a, problem, placements, closeness)
     return sum
 
 def process(pf,sf):
@@ -63,6 +86,8 @@ def process(pf,sf):
             print(f"Invalid problem id: {id}")
             sys.exit(1)
         problem = load_problem(pf)
+        # add the id to the problem
+        problem['id'] = id
         placements = load_solution(sf)
         score = calc_score(problem, placements)
         print(f"Score: {score}")

@@ -1,6 +1,12 @@
 import math
 
-# points are represented as a list [x,y]
+# distance between positions of the form {'x':x, 'y':y}
+def distance(p,q):
+    dx = p['x'] - q['x']
+    dy = p['y'] - q['y']
+    return math.sqrt(dx*dx + dy*dy)
+
+# From hereon, points are represented as a list [x,y]
 
 def point_diff(a, b):
     return [a[0] - b[0], a[1] - b[1]]
