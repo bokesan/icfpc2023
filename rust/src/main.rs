@@ -74,13 +74,11 @@ fn main() {
 		let (id, problem) = load_problem(&f, verbose);
 		println!("Problem {} loaded. Musicians: {}, instruments: {}, attendees: {}",
 				 id, problem.musicians.len(), problem.num_instruments(), problem.attendees.len());
-		println!("Sums of tastes: {:?}", sum_tastes(&problem));
+		// println!("Sums of tastes: {:?}", sum_tastes(&problem));
 		let (score, solution) = mutate_solver::optimize(&problem, id >= 56, time);
 		let ref_score = scoring::score(&problem, &solution, id >= 56);
-		if score == ref_score {
-			println!("Score matches reference score: {}", score);
-		} else {
-			println!("Scores do not match. Solver: {}, reference: {}, {:.1}% off.",
+		if score != ref_score {
+			println!("!!!!! Scores do not match. Solver: {}, reference: {}, {:.1}% off.",
 					 score, ref_score, percent_off(ref_score, score));
 		}
 		if score <= 0.0 {
@@ -99,6 +97,7 @@ fn percent_off(correct: f64, wrong: f64) -> f64 {
 	100.0 * delta / correct
 }
 
+#[allow(dead_code)]
 fn sum_tastes(problem: &Problem) -> Vec<f64> {
 	let mut sums = vec![0.0; problem.num_instruments()];
 	for a in &problem.attendees {

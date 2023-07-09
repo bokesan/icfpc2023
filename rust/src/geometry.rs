@@ -114,7 +114,7 @@ impl<T: fmt::Display> fmt::Display for Vector<T> {
     }
 }
 
-impl<T: Copy + ops::Add<Output = T> + ops::Mul<Output = T> + std::convert::Into<f64>> Vector<T> {
+impl<T: Copy + ops::Add<Output = T> + ops::Mul<Output = T> + Into<f64>> Vector<T> {
 
     pub fn length_squared(&self) -> T {
         self.x * self.x + self.y * self.y

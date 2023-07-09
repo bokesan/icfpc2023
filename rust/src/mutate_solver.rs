@@ -28,10 +28,10 @@ fn make_positions(problem: &Problem) -> Vec<Point<f64>> {
         c = n as i32;
     }
     while c < max_cols && c * r < n as i32 {
-        c = c + 1
+        c += 1
     }
     while r < max_rows && c * r < n as i32 {
-        r = r + 1
+        r += 1
     }
 
     if c * r < n as i32 {
@@ -57,9 +57,9 @@ fn make_positions(problem: &Problem) -> Vec<Point<f64>> {
                 if positions.len() == n {
                     return positions;
                 }
-                x = x + x_step;
+                x += x_step;
             }
-            y = y + y_step;
+            y += y_step;
         }
     positions
 }
@@ -126,7 +126,7 @@ fn impact(att: &Attendee, mus: Point<f64>, instrument: usize) -> f64 {
     let dx = att.x - mus.x;
     let dy = att.y - mus.y;
     let d = (dx * dx + dy * dy).sqrt();
-    (1000000.0 * att.tastes[instrument] / (d*d)).ceil()
+    (1_000_000.0 * att.tastes[instrument] / (d*d)).ceil()
 }
 
 fn happiness(attendee_index: usize, problem: &Problem, placements: &Vec<(Point<f64>, Vec<bool>)>, volumes: &Vec<f64>, closeness: &Vec<f64>) -> f64 {
@@ -279,7 +279,7 @@ pub fn optimize(problem: &Problem, playing_together: bool, max_time_seconds: u64
         if ela > timeout {
             break;
         }
-        perms = perms + 1;
+        perms += 1;
         let (new_ar, new_volumes) = mutate(problem, &ar, &volumes, swap_enabled);
         let new_s = score(problem, &new_ar, &new_volumes, playing_together);
         if new_s > s {
@@ -308,15 +308,12 @@ pub fn optimize(problem: &Problem, playing_together: bool, max_time_seconds: u64
         }
     }
     let sol = Solution { placements: best_so_far.iter().map(|e| e.0).collect(), volumes: Some(best_volumes_so_far) };
-    let sol_score = scoring::score(problem, &sol, playing_together);
-    if sol_score != best_score_so_far {
-        panic!("Bug in solver score computation. Solver: {}, reference: {}", best_score_so_far, sol_score);
-    }
-    println!("{} mutations tested. Final score: {}", perms, sol_score);
-    (sol_score, sol)
+    println!("{} mutations tested. Final score: {}", perms, best_score_so_far);
+    (best_score_so_far, sol)
 }
 
 
+#[allow(dead_code)]
 pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -> (f64, Solution) {
     let timeout = Duration::from_secs(max_time_seconds);
     let start = Instant::now();
@@ -332,7 +329,7 @@ pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -
     let swap_enabled = problem.musicians.iter().any(|i| *i != 0);
     let mut perms: u64 = 1;
     while start.elapsed() < timeout {
-        perms = perms + 1;
+        perms += 1;
         let (r2, nv) = mutate(problem, &ar, &volumes, swap_enabled);
         let s2 = score(problem, &r2, &nv, playing_together);
         if s2 > s {

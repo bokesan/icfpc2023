@@ -41,7 +41,7 @@ fn impact(problem: &Problem, attendee: &Attendee, placements: &Vec<Point<f64>>, 
     let dy = attendee.y - p.y;
     let d = (dx*dx + dy*dy).sqrt();
     let instrument = problem.musicians[k];
-    (1000000.0 * attendee.tastes[instrument] / (d*d)).ceil()
+    (1_000_000.0 * attendee.tastes[instrument] / (d*d)).ceil()
 }
 
 pub fn is_blocked(problem: &Problem, attendee: &Attendee, placements: &Vec<Point<f64>>, musician_index: usize) -> bool {
