@@ -299,9 +299,6 @@ pub fn optimize(problem: &Problem, playing_together: bool, max_time_seconds: u64
                 best_so_far.clone_from(&ar);
                 best_volumes_so_far.clone_from(&volumes);
                 best_score_so_far = s;
-                // println!("New best score: {}", s);
-                // } else {
-                // println!("New score: {}", s);
             }
         } else {
             let t = temperature(ela.as_secs_f64() / max_time_seconds as f64);
@@ -312,42 +309,10 @@ pub fn optimize(problem: &Problem, playing_together: bool, max_time_seconds: u64
                 ar = new_ar;
                 volumes = new_volumes;
                 s = new_s;
-                // println!("New score: {} (accepted)", s);
             }
         }
     }
     let sol = Solution { placements: best_so_far.iter().map(|e| e.0).collect(), volumes: Some(best_volumes_so_far) };
     println!("{} mutations tested. Final score: {}", perms, best_score_so_far);
     (best_score_so_far, sol)
-}
-
-
-#[allow(dead_code)]
-pub fn solve(problem: &Problem, playing_together: bool, max_time_seconds: u64) -> (f64, Solution) {
-    let timeout = Duration::from_secs(max_time_seconds);
-    let start = Instant::now();
-    let r = make_positions(problem);
-    let mut volumes = vec![10.0; problem.musicians.len()];
-    let mut ar = annotate_with_los(problem, &r);
-    let mut s = score(problem, &ar, &volumes, playing_together);
-    let ref_score = scoring::score(problem, &Solution { placements: r, volumes: Some(volumes.to_vec()) }, playing_together);
-    if s != ref_score {
-        panic!("Bug in solver score computation. Solver: {}, reference: {}", s, ref_score);
-    }
-    println!("Initial score: {}", s);
-    let swap_enabled = problem.musicians.iter().any(|i| *i != 0);
-    let mut perms: u64 = 1;
-    while start.elapsed() < timeout {
-        perms += 1;
-        let (r2, nv) = mutate(problem, &ar, &volumes, swap_enabled);
-        let s2 = score(problem, &r2, &nv, playing_together);
-        if s2 > s {
-            // println!("    good one! Score improved from {} to {}", s, s2);
-            ar = r2;
-            volumes = nv;
-            s = s2;
-        }
-    }
-    println!("{} mutations tested. Final score: {}", perms, s);
-    (s, Solution { placements: ar.iter().map(|x| x.0).collect(), volumes: Some(volumes.to_vec()) })
 }
