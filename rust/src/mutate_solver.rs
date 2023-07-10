@@ -190,6 +190,15 @@ fn mutation_move(problem: &Problem, placements: &mut Vec<(Point<f64>, Vec<bool>)
     false
 }
 
+fn volumes_ok(volumes: &[f64]) -> bool {
+    for v in volumes {
+        if *v > 9.9 {
+            return true
+        }
+    }
+    false
+}
+
 fn mutate(problem: &Problem, v: &[(Point<f64>, Vec<bool>)], volumes: &[f64], swap_enabled: bool) -> (Vec<(Point<f64>, Vec<bool>)>, Vec<f64>) {
     let mut r = v.to_vec();
     let mut vol = volumes.to_vec();
@@ -207,10 +216,12 @@ fn mutate(problem: &Problem, v: &[(Point<f64>, Vec<bool>)], volumes: &[f64], swa
         let mus = rng.gen_range(0..problem.musicians.len());
         let old_vol = vol[mus];
         loop {
-            let new_vol = rng.gen_range(0..=10) as f64;
+            let new_vol = (rng.gen_range(0..=1000) as u32) as f64 / 100.0;
             if new_vol != old_vol {
                 vol[mus] = new_vol;
-                return (r, vol);
+                if volumes_ok(&vol) {
+                    return (r, vol);
+                }
             }
         }
     }
@@ -242,7 +253,7 @@ fn acceptance_probability(old_score: f64, new_score: f64, temperature: f64) -> f
         1.0
     } else {
         let diff = old_score - new_score;
-        let arg = - diff.max(1.0) / (temperature * 1000000.0); // FIXME: magic constant
+        let arg = - diff.max(1.0) / (temperature * 10000.0); // FIXME: magic constant
         
         // println!("acceptance_probability: old_score: {}, new_score: {}, temperature: {:.3}, diff: {}, arg: {:.3}, r: {:.3}",
         //          old_score, new_score, temperature, diff, arg, r);
