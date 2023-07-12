@@ -20,6 +20,9 @@ and Rust for our actual solver.
     - Swapping the positions of two musicians
     - Moving a musician
     - Changing the volume of one musician
+ 
+We did not do well this year, scoring only about half of the top 10 scores,
+and probably ended up somewhere from place 65-80.
 
 ## Problems encountered / Lessons learned
 
