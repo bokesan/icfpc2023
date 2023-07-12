@@ -10,11 +10,11 @@ Members:
 ## Tools
 
 We used Python for experimentation, exploration, and visualization,
-and Rust for out actual solver.
+and Rust for our actual solver.
 
 ## Solution approach
 
-- Place musicians in regular rectangular grid on the whole stage.
+- Place musicians in a regular rectangular grid on the whole stage.
 - Optimize placement using simulated annealing. New placements are
   generated randomly using the following operations:
     - Swapping the positions of two musicians
@@ -24,18 +24,24 @@ and Rust for out actual solver.
 ## Problems encountered / Lessons learned
 
 - Bugs in our (incremental) score computation consumed much time
-- Some trivial tasks like the initial plament in a grid took way too much time
-- Our optimization converges too slowly and required a lot of code tuning
-  to even get a result. We should have investigated other approaches with faster
-  convergance.
-- We should have spent more time trying to solve problems by hand, or
-  to improve computed solutions manually. That would have required writing
+- Some trivial tasks, like the initial placement in a grid, took way too much time
+- Our optimization converges too slowly and requires much code tuning to get a result.
+  We should have investigated other approaches with faster
+  convergence.
+- We would have needed incremental score computation and a faster line-of-sound algorithm for better
+  performance. We looked at a scan-line approach for
+  the latter but failed to see how to adapt that to the problem.
+- We should have spent more time solving problems by hand or
+  improving computed solutions manually. That would have required writing
   an interactive visual solver tool, though, for which we lacked time.
+- A live visualization during the optimization would likely have been very
+  helpful to see if the optimization converges and give hints for parameter
+  tuning.
 
 ## Overall
 
-Fun problem and short and readble task specification.
+Fun problem and short and readable task specification.
 
 - Suitable for both one-person and larger teams
-- The websize and REST API were very helpful
+- The website and REST API were very helpful
 - The contest was a lot of fun. Big thanks to the organizers!
